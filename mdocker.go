@@ -1,6 +1,7 @@
 package mdocker
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -9,6 +10,11 @@ import (
 )
 
 type (
+	// RPCRequest is an interface for incoming RPC requests
+	RPCRequest interface {
+		GetOpts() interface{}
+	}
+
 	// MDocker is the Mistify Docker subagent service
 	MDocker struct {
 		endpoint string
@@ -62,6 +68,23 @@ func NewMDocker(endpoint, tlsCertPath string) (*MDocker, error) {
 		endpoint: endpoint,
 		client:   client,
 	}, nil
+}
+
+// RequestOpts extracts the request opts into an appropriate struct
+// Nested structs stored in interface{} don't convert directly, so use JSON as
+// an intermediate
+func (md *MDocker) RequestOpts(req RPCRequest, opts interface{}) error {
+	o := req.GetOpts()
+	if o == nil {
+		return nil
+	}
+
+	oJSON, err := json.Marshal(o)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(oJSON, opts)
 }
 
 // GetInfo provides general information about the system from Docker
