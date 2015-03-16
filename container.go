@@ -6,19 +6,6 @@ import (
 	"github.com/fsouza/go-dockerclient"
 )
 
-// FakeContainer is a hardcoded container for stubbing purposes
-// TODO: Remove once everything is built out
-var FakeContainer = docker.APIContainers{
-	ID:      "2f07b3c86f592d4c3ae6c45c058bff080490d8c62ce66530eb187b2b44f1c997",
-	Image:   "centos:7",
-	Command: "/bin/bash",
-	Created: 1426187284,
-	Status:  "Exited (0) 55 seconds ago",
-	Names: []string{
-		"/focused_brattain",
-	},
-}
-
 type (
 	// ContainerRequest is a container request to the Docker sub-agent
 	ContainerRequest struct {
@@ -28,66 +15,150 @@ type (
 
 	// ContainerResponse is a container response from the Docker sub-agent
 	ContainerResponse struct {
-		Containers []docker.APIContainers `json:"containers"` // Slice of one or more containers
+		Containers []*docker.Container `json:"containers"` // Slice of one or more containers
 	}
 )
 
 // GetOpts returns the Opts property
-func (cs *ContainerRequest) GetOpts() interface{} {
-	return cs.Opts
+func (creq *ContainerRequest) GetOpts() interface{} {
+	return creq.Opts
+}
+
+func (md *MDocker) containersFromAPIContainers(acs []docker.APIContainers) ([]*docker.Container, error) {
+	containers := make([]*docker.Container, 0, len(acs))
+	for _, ac := range acs {
+		container, err := md.client.InspectContainer(ac.ID)
+		if err != nil {
+			return nil, err
+		}
+		containers = append(containers, container)
+	}
+	return containers, nil
 }
 
 // ListContainers retrieves a list of Docker containers
 func (md *MDocker) ListContainers(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
-	opts := &docker.ListContainersOptions{}
-	if err := md.RequestOpts(request, opts); err != nil {
+	var opts docker.ListContainersOptions
+	if err := md.RequestOpts(request, &opts); err != nil {
 		return err
 	}
 
-	containers, err := md.client.ListContainers(*opts)
+	apiContainers, err := md.client.ListContainers(opts)
 	if err != nil {
 		return err
 	}
+	containers, err := md.containersFromAPIContainers(apiContainers)
+	if err != nil {
+		return err
+	}
+
 	response.Containers = containers
 	return nil
 }
 
 // GetContainer retrieves information about a specific Docker container
 func (md *MDocker) GetContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
-	response.Containers = []docker.APIContainers{
-		FakeContainer,
+	container, err := md.client.InspectContainer(request.ID)
+	if err != nil {
+		return err
+	}
+
+	response.Containers = []*docker.Container{
+		container,
 	}
 	return nil
 }
 
 // DeleteContainer deletes a Docker container
 func (md *MDocker) DeleteContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
-	response.Containers = []docker.APIContainers{
-		FakeContainer,
+	container, err := md.client.InspectContainer(request.ID)
+	if err != nil {
+		return err
+	}
+
+	var opts docker.RemoveContainerOptions
+	if err := md.RequestOpts(request, &opts); err != nil {
+		return err
+	}
+	if opts.ID == "" {
+		opts.ID = container.ID
+	}
+	if err := md.client.RemoveContainer(opts); err != nil {
+		return err
+	}
+	response.Containers = []*docker.Container{
+		container,
 	}
 	return nil
 }
 
 // SaveContainer saves a Docker container
-func (md *MDocker) SaveContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
-	response.Containers = []docker.APIContainers{
-		FakeContainer,
+func (md *MDocker) SaveContainer(h *http.Request, request *ContainerRequest, response *ImageResponse) error {
+	var opts docker.CommitContainerOptions
+	if err := md.RequestOpts(request, &opts); err != nil {
+		return err
+	}
+	if request.ID != "" {
+		opts.Container = request.ID
+	}
+	image, err := md.client.CommitContainer(opts)
+	if err != nil {
+		return err
+	}
+	response.Images = []*docker.Image{
+		image,
+	}
+	return nil
+}
+
+// CreateContainer creates a new Docker container
+func (md *MDocker) CreateContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+	opts := docker.CreateContainerOptions{}
+	if err := md.RequestOpts(request, &opts); err != nil {
+		return nil
+	}
+	container, err := md.client.CreateContainer(opts)
+	if err != nil {
+		return err
+	}
+	response.Containers = []*docker.Container{
+		container,
 	}
 	return nil
 }
 
 // StartContainer starts a Docker container
 func (md *MDocker) StartContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
-	response.Containers = []docker.APIContainers{
-		FakeContainer,
+	hostConfig := &docker.HostConfig{}
+	if err := md.RequestOpts(request, hostConfig); err != nil {
+		return err
+	}
+	if err := md.client.StartContainer(request.ID, hostConfig); err != nil {
+		return err
+	}
+
+	container, err := md.client.InspectContainer(request.ID)
+	if err != nil {
+		return err
+	}
+	response.Containers = []*docker.Container{
+		container,
 	}
 	return nil
 }
 
 // StopContainer stop a Docker container or kills it after a timeout
 func (md *MDocker) StopContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
-	response.Containers = []docker.APIContainers{
-		FakeContainer,
+	if err := md.client.StopContainer(request.ID, 60); err != nil {
+		return err
+	}
+
+	container, err := md.client.InspectContainer(request.ID)
+	if err != nil {
+		return err
+	}
+	response.Containers = []*docker.Container{
+		container,
 	}
 	return nil
 }

@@ -111,13 +111,7 @@ func (md *MDocker) PullImage(h *http.Request, request *ImageRequest, response *I
 
 // DeleteImage deletes a Docker image
 func (md *MDocker) DeleteImage(h *http.Request, request *ImageRequest, response *ImageResponse) error {
-	// Lookup works with Name or ID
-	lookup := request.ID
-	if lookup == "" {
-		lookup = request.Name
-	}
-
-	image, err := md.client.InspectImage(lookup)
+	image, err := md.client.InspectImage(request.GetLookup(""))
 	if err != nil {
 		return err
 	}
@@ -126,7 +120,7 @@ func (md *MDocker) DeleteImage(h *http.Request, request *ImageRequest, response 
 	if err := md.RequestOpts(request, opts); err != nil {
 		return err
 	}
-	if err := md.client.RemoveImageExtended(lookup, opts); err != nil {
+	if err := md.client.RemoveImageExtended(image.ID, opts); err != nil {
 		return err
 	}
 

@@ -13,9 +13,10 @@ import (
 )
 
 type TestClient struct {
-	rpc       *rpc.Client
-	ImageName string
-	ImageID   string
+	rpc         *rpc.Client
+	ImageName   string
+	ImageID     string
+	ContainerID string
 }
 
 var client TestClient
