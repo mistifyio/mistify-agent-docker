@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-agent-docker"
+	logx "github.com/mistifyio/mistify-logrus-ext"
 	flag "github.com/ogier/pflag"
 )
 
@@ -21,15 +22,12 @@ func main() {
 	flag.Parse()
 
 	// Set up logging
-	log.SetFormatter(&log.JSONFormatter{})
-	level, err := log.ParseLevel(logLevel)
-	if err != nil {
+	if err := logx.DefaultSetup(logLevel); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"func":  "log.ParseLevel",
-		}).Fatal("invalid log level")
+			"func":  "logx.DefaultSetup",
+		}).Fatal("Could not set up logging")
 	}
-	log.SetLevel(level)
 
 	// Prepare docker connection configuration
 	if !tls {
