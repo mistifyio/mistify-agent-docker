@@ -48,4 +48,5 @@ func TestGetInfo(t *testing.T) {
 	req := &struct{}{}
 	resp := &docker.Env{}
 	h.Ok(t, client.rpc.Do("MDocker.GetInfo", req, resp))
+	h.Assert(t, len(*resp) > 0, "response should not be empty")
 }
