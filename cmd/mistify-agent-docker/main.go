@@ -34,10 +34,14 @@ func main() {
 		tlsCertPath = ""
 	}
 	log.WithFields(log.Fields{
-		"endpoint":   endpoint,
-		"tlsEnabled": tls,
-		"certPath":   tlsCertPath,
-	}).Info("docker configuration")
+		"port":     port,
+		"logLevel": logLevel,
+		"docker": map[string]interface{}{
+			"endpoint":   endpoint,
+			"tlsEnabled": tls,
+			"certPath":   tlsCertPath,
+		},
+	}).Info("configuration")
 
 	// Create the MDocker instance
 	md, err := mdocker.NewMDocker(endpoint, tlsCertPath)
