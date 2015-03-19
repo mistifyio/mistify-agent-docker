@@ -94,13 +94,21 @@ func (md *MDocker) PullImage(h *http.Request, request *ImageRequest, response *I
 		opts.Tag = "latest"
 	}
 
-	if err := md.client.PullImage(opts, docker.AuthConfiguration{}); err != nil {
+	// Check if we already have the image to avoid unnecessary pulling
+	image, err := md.client.InspectImage(opts.Repository)
+	if err != nil && err != docker.ErrNoSuchImage {
 		return err
 	}
 
-	image, err := md.client.InspectImage(opts.Repository)
-	if err != nil {
-		return err
+	if image == nil {
+		if err := md.client.PullImage(opts, docker.AuthConfiguration{}); err != nil {
+			return err
+		}
+
+		image, err = md.client.InspectImage(opts.Repository)
+		if err != nil {
+			return err
+		}
 	}
 
 	response.Images = []*docker.Image{
