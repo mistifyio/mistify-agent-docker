@@ -1,15 +1,16 @@
 package mdocker_test
 
 import (
-	"log"
 	"os"
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	h "github.com/bakins/test-helpers"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/mistifyio/mistify-agent-docker"
 	"github.com/mistifyio/mistify-agent/rpc"
+	logx "github.com/mistifyio/mistify-logrus-ext"
 )
 
 type TestClient struct {
@@ -24,6 +25,14 @@ var client TestClient
 // TestMain sets up the server and RPC client before running tests
 func TestMain(m *testing.M) {
 	var port uint = 30001
+	logLevel := "info"
+	if err := logx.DefaultSetup(logLevel); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"func":  "logx.DefaultSetup",
+			"level": logLevel,
+		}).Fatal("failed to set up logging")
+	}
 	md, err := mdocker.NewMDocker("unix:///var/run/docker.sock", "")
 	if err != nil {
 		log.Fatal("Can't create mdocker:", err)
