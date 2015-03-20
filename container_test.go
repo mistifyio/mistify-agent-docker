@@ -5,7 +5,7 @@ import (
 
 	h "github.com/bakins/test-helpers"
 	"github.com/fsouza/go-dockerclient"
-	"github.com/mistifyio/mistify-agent-docker"
+	"github.com/mistifyio/mistify-agent/rpc"
 )
 
 func createMainContainer(t *testing.T) {
@@ -13,7 +13,7 @@ func createMainContainer(t *testing.T) {
 		return
 	}
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		Opts: &docker.CreateContainerOptions{
 			Config: &docker.Config{
 				Image: client.ImageName,
@@ -21,7 +21,7 @@ func createMainContainer(t *testing.T) {
 			},
 		},
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.CreateContainer", req, resp))
 	client.ContainerID = resp.Containers[0].ID
@@ -32,10 +32,10 @@ func deleteMainContainer(t *testing.T) {
 		return
 	}
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		ID: client.ContainerID,
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.DeleteContainer", req, resp))
 	client.ContainerID = ""
@@ -46,7 +46,7 @@ func TestCreateContainer(t *testing.T) {
 	deleteMainContainer(t)
 	createMainContainer(t)
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		Opts: &docker.CreateContainerOptions{
 			Config: &docker.Config{
 				Image: "asdfasdfaf",
@@ -54,7 +54,7 @@ func TestCreateContainer(t *testing.T) {
 			},
 		},
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 	h.Assert(t, client.rpc.Do("MDocker.CreateContainer", req, resp) != nil, "bad image should error")
 }
 
@@ -62,12 +62,12 @@ func TestListContainers(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		Opts: &docker.ListContainersOptions{
 			All: true,
 		},
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.ListContainers", req, resp))
 
@@ -86,10 +86,10 @@ func TestGetContainer(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		ID: client.ContainerID,
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.GetContainer", req, resp))
 
@@ -100,20 +100,20 @@ func TestSaveContainer(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		ID: client.ContainerID,
 		Opts: &docker.CommitContainerOptions{
 			Container:  client.ContainerID,
 			Repository: "test-commit",
 		},
 	}
-	resp := &mdocker.ImageResponse{}
+	resp := &rpc.ContainerImageResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.SaveContainer", req, resp))
 
-	ireq := &mdocker.ImageRequest{
+	ireq := &rpc.ContainerImageRequest{
 		Name: "test-commit",
 	}
-	iresp := &mdocker.ImageResponse{}
+	iresp := &rpc.ContainerImageResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", ireq, iresp))
 }
 
@@ -121,16 +121,16 @@ func TestStartContainer(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		ID: "asdfouasdfafd",
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 	h.Assert(t, client.rpc.Do("MDocker.StartContainer", req, resp) != nil, "bad container should error")
 
-	req = &mdocker.ContainerRequest{
+	req = &rpc.ContainerRequest{
 		ID: client.ContainerID,
 	}
-	resp = &mdocker.ContainerResponse{}
+	resp = &rpc.ContainerResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.StartContainer", req, resp))
 }
 
@@ -138,16 +138,16 @@ func TestStopContainer(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &mdocker.ContainerRequest{
+	req := &rpc.ContainerRequest{
 		ID: client.ContainerID,
 	}
-	resp := &mdocker.ContainerResponse{}
+	resp := &rpc.ContainerResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.StopContainer", req, resp))
 
-	req = &mdocker.ContainerRequest{
+	req = &rpc.ContainerRequest{
 		ID: "asdfasdfasdf",
 	}
-	resp = &mdocker.ContainerResponse{}
+	resp = &rpc.ContainerResponse{}
 	h.Assert(t, client.rpc.Do("MDocker.StopContainer", req, resp) != nil, "bad container should error")
 }
 

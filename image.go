@@ -4,37 +4,8 @@ import (
 	"net/http"
 
 	"github.com/fsouza/go-dockerclient"
+	"github.com/mistifyio/mistify-agent/rpc"
 )
-
-type (
-	// ImageRequest is an image request to the Docker sub-agent
-	ImageRequest struct {
-		ID   string      `json:"id"`   // Image ID
-		Name string      `json:"name"` // Image name
-		Opts interface{} `json:"opts"` // Generic Options. Will need converting
-	}
-
-	// ImageResponse is an image response from the Docker sub-agent
-	ImageResponse struct {
-		Images []*docker.Image `json:"images"` // Slice of one or more images
-	}
-)
-
-// GetOpts returns the Opts property
-func (ireq *ImageRequest) GetOpts() interface{} {
-	return ireq.Opts
-}
-
-// GetLookup returns the string to look an image up by based on field priority
-func (ireq *ImageRequest) GetLookup(d string) string {
-	if ireq.ID != "" {
-		return ireq.ID
-	}
-	if ireq.Name != "" {
-		return ireq.Name
-	}
-	return d
-}
 
 // imagesFromAPIImages converts an array of APIImages into an array of Image
 func (md *MDocker) imagesFromAPIImages(ais []docker.APIImages) ([]*docker.Image, error) {
@@ -50,7 +21,7 @@ func (md *MDocker) imagesFromAPIImages(ais []docker.APIImages) ([]*docker.Image,
 }
 
 // ListImages retrieves a list of Docker images
-func (md *MDocker) ListImages(h *http.Request, request *ImageRequest, response *ImageResponse) error {
+func (md *MDocker) ListImages(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
 	opts := docker.ListImagesOptions{}
 	if err := md.RequestOpts(request, &opts); err != nil {
 		return err
@@ -70,7 +41,7 @@ func (md *MDocker) ListImages(h *http.Request, request *ImageRequest, response *
 }
 
 // GetImage retrieves information about a specific Docker image
-func (md *MDocker) GetImage(h *http.Request, request *ImageRequest, response *ImageResponse) error {
+func (md *MDocker) GetImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
 	image, err := md.client.InspectImage(request.GetLookup(""))
 	if err != nil {
 		return err
@@ -83,7 +54,7 @@ func (md *MDocker) GetImage(h *http.Request, request *ImageRequest, response *Im
 }
 
 // PullImage downloads a new Docker image
-func (md *MDocker) PullImage(h *http.Request, request *ImageRequest, response *ImageResponse) error {
+func (md *MDocker) PullImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
 	var opts docker.PullImageOptions
 	if err := md.RequestOpts(request, opts); err != nil {
 		return err
@@ -118,7 +89,7 @@ func (md *MDocker) PullImage(h *http.Request, request *ImageRequest, response *I
 }
 
 // DeleteImage deletes a Docker image
-func (md *MDocker) DeleteImage(h *http.Request, request *ImageRequest, response *ImageResponse) error {
+func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
 	image, err := md.client.InspectImage(request.GetLookup(""))
 	if err != nil {
 		return err

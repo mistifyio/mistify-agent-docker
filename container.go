@@ -4,25 +4,8 @@ import (
 	"net/http"
 
 	"github.com/fsouza/go-dockerclient"
+	"github.com/mistifyio/mistify-agent/rpc"
 )
-
-type (
-	// ContainerRequest is a container request to the Docker sub-agent
-	ContainerRequest struct {
-		ID   string      `json:"id"`   // Container ID
-		Opts interface{} `json:"opts"` // Generic Options. Will need converting
-	}
-
-	// ContainerResponse is a container response from the Docker sub-agent
-	ContainerResponse struct {
-		Containers []*docker.Container `json:"containers"` // Slice of one or more containers
-	}
-)
-
-// GetOpts returns the Opts property
-func (creq *ContainerRequest) GetOpts() interface{} {
-	return creq.Opts
-}
 
 func (md *MDocker) containersFromAPIContainers(acs []docker.APIContainers) ([]*docker.Container, error) {
 	containers := make([]*docker.Container, 0, len(acs))
@@ -37,7 +20,7 @@ func (md *MDocker) containersFromAPIContainers(acs []docker.APIContainers) ([]*d
 }
 
 // ListContainers retrieves a list of Docker containers
-func (md *MDocker) ListContainers(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+func (md *MDocker) ListContainers(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerResponse) error {
 	var opts docker.ListContainersOptions
 	if err := md.RequestOpts(request, &opts); err != nil {
 		return err
@@ -57,7 +40,7 @@ func (md *MDocker) ListContainers(h *http.Request, request *ContainerRequest, re
 }
 
 // GetContainer retrieves information about a specific Docker container
-func (md *MDocker) GetContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+func (md *MDocker) GetContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerResponse) error {
 	container, err := md.client.InspectContainer(request.ID)
 	if err != nil {
 		return err
@@ -70,7 +53,7 @@ func (md *MDocker) GetContainer(h *http.Request, request *ContainerRequest, resp
 }
 
 // DeleteContainer deletes a Docker container
-func (md *MDocker) DeleteContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+func (md *MDocker) DeleteContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerResponse) error {
 	container, err := md.client.InspectContainer(request.ID)
 	if err != nil {
 		return err
@@ -93,7 +76,7 @@ func (md *MDocker) DeleteContainer(h *http.Request, request *ContainerRequest, r
 }
 
 // SaveContainer saves a Docker container
-func (md *MDocker) SaveContainer(h *http.Request, request *ContainerRequest, response *ImageResponse) error {
+func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerImageResponse) error {
 	var opts docker.CommitContainerOptions
 	if err := md.RequestOpts(request, &opts); err != nil {
 		return err
@@ -112,7 +95,7 @@ func (md *MDocker) SaveContainer(h *http.Request, request *ContainerRequest, res
 }
 
 // CreateContainer creates a new Docker container
-func (md *MDocker) CreateContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+func (md *MDocker) CreateContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerResponse) error {
 	opts := docker.CreateContainerOptions{}
 	if err := md.RequestOpts(request, &opts); err != nil {
 		return nil
@@ -128,7 +111,7 @@ func (md *MDocker) CreateContainer(h *http.Request, request *ContainerRequest, r
 }
 
 // StartContainer starts a Docker container
-func (md *MDocker) StartContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+func (md *MDocker) StartContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerResponse) error {
 	hostConfig := &docker.HostConfig{}
 	if err := md.RequestOpts(request, hostConfig); err != nil {
 		return err
@@ -148,7 +131,7 @@ func (md *MDocker) StartContainer(h *http.Request, request *ContainerRequest, re
 }
 
 // StopContainer stop a Docker container or kills it after a timeout
-func (md *MDocker) StopContainer(h *http.Request, request *ContainerRequest, response *ContainerResponse) error {
+func (md *MDocker) StopContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerResponse) error {
 	if err := md.client.StopContainer(request.ID, 60); err != nil {
 		return err
 	}
