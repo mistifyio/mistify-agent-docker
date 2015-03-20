@@ -17,7 +17,7 @@ func createMainContainer(t *testing.T) {
 		Opts: &docker.CreateContainerOptions{
 			Config: &docker.Config{
 				Image: client.ImageName,
-				Cmd:   []string{"sh"},
+				Cmd:   []string{"sleep", "5"},
 			},
 		},
 	}
@@ -132,6 +132,7 @@ func TestStartContainer(t *testing.T) {
 	}
 	resp = &rpc.ContainerResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.StartContainer", req, resp))
+	h.Assert(t, resp.Containers[0].State.Running, "container should be running")
 }
 
 func TestStopContainer(t *testing.T) {
@@ -143,6 +144,7 @@ func TestStopContainer(t *testing.T) {
 	}
 	resp := &rpc.ContainerResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.StopContainer", req, resp))
+	h.Assert(t, !resp.Containers[0].State.Running, "container should not be running")
 
 	req = &rpc.ContainerRequest{
 		ID: "asdfasdfasdf",
