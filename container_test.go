@@ -2,43 +2,50 @@ package mdocker_test
 
 import (
 	"testing"
+	"time"
 
 	h "github.com/bakins/test-helpers"
 	"github.com/fsouza/go-dockerclient"
+	rpcClient "github.com/mistifyio/mistify-agent/client"
 	"github.com/mistifyio/mistify-agent/rpc"
 )
 
+func newGuest() *rpcClient.Guest {
+	return &rpcClient.Guest{
+		Id:    "foobar",
+		Type:  "container",
+		Image: client.ImageName,
+	}
+}
+
 func createMainContainer(t *testing.T) {
-	if client.ContainerID != "" {
+	if client.ContainerName != "" {
 		return
 	}
 
-	req := &rpc.ContainerRequest{
-		Opts: &docker.CreateContainerOptions{
-			Config: &docker.Config{
-				Image: client.ImageName,
-				Cmd:   []string{"sleep", "5"},
-			},
-		},
+	req := &rpc.GuestRequest{
+		Guest:  newGuest(),
+		Action: "containerCreate",
 	}
-	resp := &rpc.ContainerResponse{}
+	resp := &rpc.GuestResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.CreateContainer", req, resp))
-	client.ContainerID = resp.Containers[0].ID
+	client.ContainerName = req.Guest.Id
 }
 
 func deleteMainContainer(t *testing.T) {
-	if client.ContainerID == "" {
+	if client.ContainerName == "" {
 		return
 	}
 
-	req := &rpc.ContainerRequest{
-		ID: client.ContainerID,
+	req := &rpc.GuestRequest{
+		Guest:  newGuest(),
+		Action: "containerDelete",
 	}
-	resp := &rpc.ContainerResponse{}
+	resp := &rpc.GuestResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.DeleteContainer", req, resp))
-	client.ContainerID = ""
+	client.ContainerName = ""
 }
 
 func TestCreateContainer(t *testing.T) {
@@ -46,15 +53,16 @@ func TestCreateContainer(t *testing.T) {
 	deleteMainContainer(t)
 	createMainContainer(t)
 
-	req := &rpc.ContainerRequest{
-		Opts: &docker.CreateContainerOptions{
-			Config: &docker.Config{
-				Image: "asdfasdfaf",
-				Cmd:   []string{"sh"},
-			},
+	req := &rpc.GuestRequest{
+		Guest: &rpcClient.Guest{
+			Id:    "foobar",
+			Type:  "container",
+			Image: "asdfasdfpoih",
 		},
+		Action: "containerDelete",
 	}
-	resp := &rpc.ContainerResponse{}
+	resp := &rpc.GuestResponse{}
+
 	h.Assert(t, client.rpc.Do("MDocker.CreateContainer", req, resp) != nil, "bad image should error")
 }
 
@@ -70,16 +78,6 @@ func TestListContainers(t *testing.T) {
 	resp := &rpc.ContainerResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.ListContainers", req, resp))
-
-	found := false
-	for _, c := range resp.Containers {
-		if c.ID == client.ContainerID {
-			found = true
-			break
-		}
-	}
-	h.Assert(t, found, "did not find created container in list")
-
 }
 
 func TestGetContainer(t *testing.T) {
@@ -87,13 +85,11 @@ func TestGetContainer(t *testing.T) {
 	createMainContainer(t)
 
 	req := &rpc.ContainerRequest{
-		ID: client.ContainerID,
+		ID: client.ContainerName,
 	}
 	resp := &rpc.ContainerResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.GetContainer", req, resp))
-
-	h.Equals(t, client.ContainerID, resp.Containers[0].ID)
 }
 
 func TestSaveContainer(t *testing.T) {
@@ -101,9 +97,9 @@ func TestSaveContainer(t *testing.T) {
 	createMainContainer(t)
 
 	req := &rpc.ContainerRequest{
-		ID: client.ContainerID,
+		ID: client.ContainerName,
 		Opts: &docker.CommitContainerOptions{
-			Container:  client.ContainerID,
+			Container:  client.ContainerName,
 			Repository: "test-commit",
 		},
 	}
@@ -121,36 +117,50 @@ func TestStartContainer(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &rpc.ContainerRequest{
-		ID: "asdfouasdfafd",
+	badreq := &rpc.GuestRequest{
+		Guest: &rpcClient.Guest{
+			Id:    "foobar2",
+			Type:  "container",
+			Image: "asdfasdfpoih",
+		},
+		Action: "containerDelete",
 	}
-	resp := &rpc.ContainerResponse{}
-	h.Assert(t, client.rpc.Do("MDocker.StartContainer", req, resp) != nil, "bad container should error")
+	badresp := &rpc.GuestResponse{}
 
-	req = &rpc.ContainerRequest{
-		ID: client.ContainerID,
+	h.Assert(t, client.rpc.Do("MDocker.StartContainer", badreq, badresp) != nil, "bad container should error")
+
+	req := &rpc.GuestRequest{
+		Guest:  newGuest(),
+		Action: "containerStart",
 	}
-	resp = &rpc.ContainerResponse{}
+	resp := &rpc.GuestResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.StartContainer", req, resp))
-	h.Assert(t, resp.Containers[0].State.Running, "container should be running")
+	h.Equals(t, resp.Guest.State, "running")
+	// Sleep a second here to avoid a race in subsequent container stopping
+	time.Sleep(time.Second)
 }
 
 func TestStopContainer(t *testing.T) {
 	pullMainImage(t)
 	createMainContainer(t)
 
-	req := &rpc.ContainerRequest{
-		ID: client.ContainerID,
+	badreq := &rpc.GuestRequest{
+		Guest: &rpcClient.Guest{
+			Id:    "foobar2",
+			Type:  "container",
+			Image: "asdfasdfpoih",
+		},
+		Action: "containerStop",
 	}
-	resp := &rpc.ContainerResponse{}
+	badresp := &rpc.GuestResponse{}
+	h.Assert(t, client.rpc.Do("MDocker.StopContainer", badreq, badresp) != nil, "bad container should error")
+	req := &rpc.GuestRequest{
+		Guest:  newGuest(),
+		Action: "containerStop",
+	}
+	resp := &rpc.GuestResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.StopContainer", req, resp))
-	h.Assert(t, !resp.Containers[0].State.Running, "container should not be running")
-
-	req = &rpc.ContainerRequest{
-		ID: "asdfasdfasdf",
-	}
-	resp = &rpc.ContainerResponse{}
-	h.Assert(t, client.rpc.Do("MDocker.StopContainer", req, resp) != nil, "bad container should error")
+	h.Equals(t, resp.Guest.State, "stopped")
 }
 
 func TestDeleteContainer(t *testing.T) {

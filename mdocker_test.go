@@ -14,10 +14,10 @@ import (
 )
 
 type TestClient struct {
-	rpc         *rpc.Client
-	ImageName   string
-	ImageID     string
-	ContainerID string
+	rpc           *rpc.Client
+	ImageName     string
+	ImageID       string
+	ContainerName string
 }
 
 var client TestClient
@@ -25,7 +25,7 @@ var client TestClient
 // TestMain sets up the server and RPC client before running tests
 func TestMain(m *testing.M) {
 	var port uint = 30001
-	logLevel := "warn"
+	logLevel := "warning"
 	if err := logx.DefaultSetup(logLevel); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 	time.Sleep(1 * time.Second)
 
 	client = TestClient{
-		ImageName: "busybox",
+		ImageName: "tauzero/test-loop",
 	}
 
 	client.rpc, err = rpc.NewClient(port, "")
