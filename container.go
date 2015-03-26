@@ -165,7 +165,8 @@ func (md *MDocker) StartContainer(h *http.Request, request *rpc.GuestRequest, re
 	hostConfig := &docker.HostConfig{
 		PublishAllPorts: true,
 	}
-	if err := md.client.StartContainer(containerName, hostConfig); err != nil {
+	err = md.client.StartContainer(containerName, hostConfig)
+	if err, ok := err.(*docker.ContainerAlreadyRunning); err != nil && !ok {
 		return err
 	}
 	state, err := md.fetchContainerState(containerName)
@@ -187,7 +188,8 @@ func (md *MDocker) StopContainer(h *http.Request, request *rpc.GuestRequest, res
 	if err != nil {
 		return err
 	}
-	if err := md.client.StopContainer(containerName, 10); err != nil {
+	err = md.client.StopContainer(containerName, 10)
+	if err, ok := err.(*docker.ContainerNotRunning); err != nil && !ok {
 		return err
 	}
 	state, err := md.fetchContainerState(containerName)
