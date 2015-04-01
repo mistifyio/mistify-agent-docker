@@ -8,9 +8,11 @@ import (
 	"github.com/mistifyio/mistify-agent/rpc"
 )
 
-var cStateRunning = "running"
-var cStatePaused = "paused"
-var cStateStopped = "stopped"
+const (
+	cStateRunning = "running"
+	cStatePaused  = "paused"
+	cStateStopped = "stopped"
+)
 
 func (md *MDocker) containersFromAPIContainers(acs []docker.APIContainers) ([]*docker.Container, error) {
 	containers := make([]*docker.Container, 0, len(acs))
