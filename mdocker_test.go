@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 			"level": logLevel,
 		}).Fatal("failed to set up logging")
 	}
-	md, err := mdocker.NewMDocker("unix:///var/run/docker.sock", "")
+	md, err := mdocker.New("unix:///var/run/docker.sock", "")
 	if err != nil {
 		log.Fatal("Can't create mdocker:", err)
 	}

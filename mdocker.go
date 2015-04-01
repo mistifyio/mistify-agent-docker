@@ -22,8 +22,8 @@ type (
 	}
 )
 
-// NewMDocker creates a new MDocker with a docker client
-func NewMDocker(endpoint, tlsCertPath string) (*MDocker, error) {
+// New creates a new MDocker with a docker client
+func New(endpoint, tlsCertPath string) (*MDocker, error) {
 	// Create a new Docker client
 	var client *docker.Client
 	var err error

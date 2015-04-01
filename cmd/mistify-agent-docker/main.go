@@ -44,7 +44,7 @@ func main() {
 	}).Info("configuration")
 
 	// Create the MDocker instance
-	md, err := mdocker.NewMDocker(endpoint, tlsCertPath)
+	md, err := mdocker.New(endpoint, tlsCertPath)
 	if err != nil {
 		os.Exit(1)
 	}
