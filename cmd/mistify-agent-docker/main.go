@@ -13,10 +13,8 @@ func main() {
 	// Handle cli flags
 	var port uint
 	var endpoint, logLevel, tlsCertPath string
-	var tls bool
 	flag.UintVarP(&port, "port", "p", 30001, "listen port")
 	flag.StringVarP(&endpoint, "endpoint", "e", "unix:///var/run/docker.sock", "docker endpoint")
-	flag.BoolVarP(&tls, "tls", "t", false, "use TLS")
 	flag.StringVarP(&tlsCertPath, "docker-cert-path", "d", os.Getenv("DOCKER_CERT_PATH"), "docker tls cert path")
 	flag.StringVarP(&logLevel, "log-level", "l", "warning", "log level: debug/info/warning/error/critical/fatal")
 	flag.Parse()
@@ -30,16 +28,12 @@ func main() {
 	}
 
 	// Prepare docker connection configuration
-	if !tls {
-		tlsCertPath = ""
-	}
 	log.WithFields(log.Fields{
 		"port":     port,
 		"logLevel": logLevel,
 		"docker": map[string]interface{}{
-			"endpoint":   endpoint,
-			"tlsEnabled": tls,
-			"certPath":   tlsCertPath,
+			"endpoint": endpoint,
+			"certPath": tlsCertPath,
 		},
 	}).Info("configuration")
 
