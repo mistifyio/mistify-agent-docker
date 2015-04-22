@@ -1,5 +1,5 @@
 /*
-mistify-agent-libvirt runs the subagent and HTTP API.
+mistify-agent-docker runs the subagent and HTTP API.
 
 Usage
 
