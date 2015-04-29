@@ -106,10 +106,10 @@ func TestSaveContainer(t *testing.T) {
 	resp := &rpc.ContainerImageResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.SaveContainer", req, resp))
 
-	ireq := &rpc.ContainerImageRequest{
-		Name: "test-commit",
+	ireq := &rpc.ImageRequest{
+		Id: "test-commit",
 	}
-	iresp := &rpc.ContainerImageResponse{}
+	iresp := &rpc.ImageResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", ireq, iresp))
 }
 

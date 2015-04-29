@@ -93,7 +93,7 @@ DeleteContainer deletes a Docker container
 #### func (*MDocker) DeleteImage
 
 ```go
-func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error
+func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
 ```
 DeleteImage deletes a Docker image
 
@@ -107,7 +107,7 @@ GetContainer retrieves information about a specific Docker container
 #### func (*MDocker) GetImage
 
 ```go
-func (md *MDocker) GetImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error
+func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
 ```
 GetImage retrieves information about a specific Docker image
 
@@ -128,7 +128,7 @@ ListContainers retrieves a list of Docker containers
 #### func (*MDocker) ListImages
 
 ```go
-func (md *MDocker) ListImages(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error
+func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
 ```
 ListImages retrieves a list of Docker images
 
@@ -142,7 +142,7 @@ PauseContainer pauses a Docker container
 #### func (*MDocker) PullImage
 
 ```go
-func (md *MDocker) PullImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error
+func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
 ```
 PullImage downloads a new Docker image
 
@@ -178,7 +178,7 @@ RunHTTP creates and runs the RPC HTTP server
 #### func (*MDocker) SaveContainer
 
 ```go
-func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerImageResponse) error
+func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ImageResponse) error
 ```
 SaveContainer saves a Docker container
 

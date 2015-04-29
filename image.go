@@ -7,33 +7,21 @@ import (
 	"github.com/mistifyio/mistify-agent/rpc"
 )
 
-// imagesFromAPIImages converts an array of APIImages into an array of Image
-func (md *MDocker) imagesFromAPIImages(ais []docker.APIImages) ([]*docker.Image, error) {
-	images := make([]*docker.Image, 0, len(ais))
-	for _, ai := range ais {
-		image, err := md.client.InspectImage(ai.ID)
-		if err != nil {
-			return nil, err
-		}
-		images = append(images, image)
-	}
-	return images, nil
-}
-
 // ListImages retrieves a list of Docker images
-func (md *MDocker) ListImages(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
+func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
 	opts := docker.ListImagesOptions{}
-	if err := md.RequestOpts(request, &opts); err != nil {
-		return err
-	}
 
 	apiImages, err := md.client.ListImages(opts)
 	if err != nil {
 		return err
 	}
-	images, err := md.imagesFromAPIImages(apiImages)
-	if err != nil {
-		return err
+	images := make([]*rpc.Image, len(apiImages))
+	for i, ai := range apiImages {
+		images[i] = &rpc.Image{
+			Id:   ai.ID,
+			Type: "container",
+			Size: uint64(ai.Size),
+		}
 	}
 
 	response.Images = images
@@ -41,32 +29,32 @@ func (md *MDocker) ListImages(h *http.Request, request *rpc.ContainerImageReques
 }
 
 // GetImage retrieves information about a specific Docker image
-func (md *MDocker) GetImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
-	image, err := md.client.InspectImage(request.GetLookup(""))
+func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
+	image, err := md.client.InspectImage(request.Id)
 	if err != nil {
 		return err
 	}
 
-	response.Images = []*docker.Image{
-		image,
+	response.Images = []*rpc.Image{
+		&rpc.Image{
+			Id:   image.ID,
+			Type: "container",
+			Size: uint64(image.Size),
+		},
 	}
 	return nil
 }
 
 // PullImage downloads a new Docker image
-func (md *MDocker) PullImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
-	var opts docker.PullImageOptions
-	if err := md.RequestOpts(request, opts); err != nil {
-		return err
-	}
-
-	opts.Repository = request.GetLookup(opts.Repository)
-	if opts.Tag == "" {
-		opts.Tag = "latest"
+func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
+	opts := docker.PullImageOptions{
+		Repository: request.Id,
+		Tag:        "latest",
+		Registry:   request.Source,
 	}
 
 	// Check if we already have the image to avoid unnecessary pulling
-	image, err := md.client.InspectImage(opts.Repository)
+	image, err := md.client.InspectImage(request.Id)
 	if err != nil && err != docker.ErrNoSuchImage {
 		return err
 	}
@@ -76,35 +64,40 @@ func (md *MDocker) PullImage(h *http.Request, request *rpc.ContainerImageRequest
 			return err
 		}
 
-		image, err = md.client.InspectImage(opts.Repository)
+		image, err = md.client.InspectImage(request.Id)
 		if err != nil {
 			return err
 		}
 	}
 
-	response.Images = []*docker.Image{
-		image,
+	response.Images = []*rpc.Image{
+		&rpc.Image{
+			Id:   image.ID,
+			Type: "container",
+			Size: uint64(image.Size),
+		},
 	}
 	return nil
 }
 
 // DeleteImage deletes a Docker image
-func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ContainerImageRequest, response *rpc.ContainerImageResponse) error {
-	image, err := md.client.InspectImage(request.GetLookup(""))
+func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
+	image, err := md.client.InspectImage(request.Id)
 	if err != nil {
 		return err
 	}
 
-	var opts docker.RemoveImageOptions
-	if err := md.RequestOpts(request, opts); err != nil {
-		return err
-	}
+	opts := docker.RemoveImageOptions{}
 	if err := md.client.RemoveImageExtended(image.ID, opts); err != nil {
 		return err
 	}
 
-	response.Images = []*docker.Image{
-		image,
+	response.Images = []*rpc.Image{
+		&rpc.Image{
+			Id:   image.ID,
+			Type: "container",
+			Size: uint64(image.Size),
+		},
 	}
 	return nil
 }
