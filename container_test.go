@@ -103,7 +103,7 @@ func TestSaveContainer(t *testing.T) {
 			Repository: "test-commit",
 		},
 	}
-	resp := &rpc.ContainerImageResponse{}
+	resp := &rpc.ImageResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.SaveContainer", req, resp))
 
 	ireq := &rpc.ImageRequest{

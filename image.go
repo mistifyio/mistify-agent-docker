@@ -20,7 +20,7 @@ func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, respon
 		images[i] = &rpc.Image{
 			Id:   ai.ID,
 			Type: "container",
-			Size: uint64(ai.Size),
+			Size: uint64(ai.Size) / 1024 / 1024,
 		}
 	}
 
@@ -39,7 +39,7 @@ func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response
 		&rpc.Image{
 			Id:   image.ID,
 			Type: "container",
-			Size: uint64(image.Size),
+			Size: uint64(image.Size) / 1024 / 1024,
 		},
 	}
 	return nil
@@ -48,13 +48,12 @@ func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response
 // PullImage downloads a new Docker image
 func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
 	opts := docker.PullImageOptions{
-		Repository: request.Id,
+		Repository: request.Source,
 		Tag:        "latest",
-		Registry:   request.Source,
 	}
 
 	// Check if we already have the image to avoid unnecessary pulling
-	image, err := md.client.InspectImage(request.Id)
+	image, err := md.client.InspectImage(request.Source)
 	if err != nil && err != docker.ErrNoSuchImage {
 		return err
 	}
@@ -64,7 +63,7 @@ func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, respons
 			return err
 		}
 
-		image, err = md.client.InspectImage(request.Id)
+		image, err = md.client.InspectImage(request.Source)
 		if err != nil {
 			return err
 		}
@@ -74,7 +73,7 @@ func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, respons
 		&rpc.Image{
 			Id:   image.ID,
 			Type: "container",
-			Size: uint64(image.Size),
+			Size: uint64(image.Size) / 1024 / 1024,
 		},
 	}
 	return nil
@@ -96,7 +95,7 @@ func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ImageRequest, respo
 		&rpc.Image{
 			Id:   image.ID,
 			Type: "container",
-			Size: uint64(image.Size),
+			Size: uint64(image.Size) / 1024 / 1024,
 		},
 	}
 	return nil

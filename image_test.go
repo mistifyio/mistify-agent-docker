@@ -12,7 +12,7 @@ func pullMainImage(t *testing.T) {
 		return
 	}
 	req := &rpc.ImageRequest{
-		Id: client.ImageName,
+		Source: client.ImageName,
 	}
 	resp := &rpc.ImageResponse{}
 
@@ -37,7 +37,7 @@ func deleteMainImage(t *testing.T) {
 
 func TestPullImage(t *testing.T) {
 	badreq := &rpc.ImageRequest{
-		Id: "asdfqewrty",
+		Source: "asdfqewrty",
 	}
 	badresp := &rpc.ImageResponse{}
 

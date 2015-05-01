@@ -123,7 +123,7 @@ func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest,
 		&rpc.Image{
 			Id:   image.ID,
 			Type: "container",
-			Size: uint64(image.Size),
+			Size: uint64(image.Size) / 1024 / 1024,
 		},
 	}
 	return nil
