@@ -107,7 +107,7 @@ func (md *MDocker) DeleteContainer(h *http.Request, request *rpc.GuestRequest, r
 }
 
 // SaveContainer saves a Docker container
-func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ContainerImageResponse) error {
+func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest, response *rpc.ImageResponse) error {
 	var opts docker.CommitContainerOptions
 	if err := md.RequestOpts(request, &opts); err != nil {
 		return err
@@ -119,8 +119,12 @@ func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest,
 	if err != nil {
 		return err
 	}
-	response.Images = []*docker.Image{
-		image,
+	response.Images = []*rpc.Image{
+		&rpc.Image{
+			Id:   image.ID,
+			Type: "container",
+			Size: uint64(image.Size) / 1024 / 1024,
+		},
 	}
 	return nil
 }

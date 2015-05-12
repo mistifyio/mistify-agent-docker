@@ -11,37 +11,37 @@ func pullMainImage(t *testing.T) {
 	if client.ImageID != "" {
 		return
 	}
-	req := &rpc.ContainerImageRequest{
-		Name: client.ImageName,
+	req := &rpc.ImageRequest{
+		Source: client.ImageName,
 	}
-	resp := &rpc.ContainerImageResponse{}
+	resp := &rpc.ImageResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.PullImage", req, resp))
 	h.Equals(t, 1, len(resp.Images))
 
-	client.ImageID = resp.Images[0].ID
+	client.ImageID = resp.Images[0].Id
 }
 
 func deleteMainImage(t *testing.T) {
 	if client.ImageID == "" {
 		return
 	}
-	req := &rpc.ContainerImageRequest{
-		Name: client.ImageName,
+	req := &rpc.ImageRequest{
+		Id: client.ImageName,
 	}
-	resp := &rpc.ContainerImageResponse{}
+	resp := &rpc.ImageResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", req, resp))
 	client.ImageID = ""
 }
 
 func TestPullImage(t *testing.T) {
-	badreq := &rpc.ContainerImageRequest{
-		Name: "asdfqewrty",
+	badreq := &rpc.ImageRequest{
+		Source: "asdfqewrty",
 	}
-	badresp := &rpc.ContainerImageResponse{}
+	badresp := &rpc.ImageResponse{}
 
-	h.Assert(t, client.rpc.Do("MDocker.PullImage", badreq, badresp) != nil, "bad image name should error")
+	h.Assert(t, client.rpc.Do("MDocker.PullImage", badreq, badresp) != nil, "bad image id should error")
 
 	// Make sure we're pulling a fresh image
 	deleteMainImage(t)
@@ -51,14 +51,14 @@ func TestPullImage(t *testing.T) {
 func TestListImages(t *testing.T) {
 	pullMainImage(t)
 
-	req := &rpc.ContainerImageRequest{}
-	resp := &rpc.ContainerImageResponse{}
+	req := &rpc.ImageRequest{}
+	resp := &rpc.ImageResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.ListImages", req, resp))
 
 	found := false
 	for _, i := range resp.Images {
-		if i.ID == client.ImageID {
+		if i.Id == client.ImageID {
 			found = true
 			break
 		}
@@ -69,26 +69,18 @@ func TestListImages(t *testing.T) {
 func TestGetImage(t *testing.T) {
 	pullMainImage(t)
 
-	req := &rpc.ContainerImageRequest{
-		Name: client.ImageName,
+	req := &rpc.ImageRequest{
+		Id: client.ImageID,
 	}
-	resp := &rpc.ContainerImageResponse{}
+	resp := &rpc.ImageResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.GetImage", req, resp))
-	h.Equals(t, client.ImageID, resp.Images[0].ID)
+	h.Equals(t, client.ImageID, resp.Images[0].Id)
 
-	req = &rpc.ContainerImageRequest{
-		ID: client.ImageID,
+	req = &rpc.ImageRequest{
+		Id: "asdfasdfa",
 	}
-	resp = &rpc.ContainerImageResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.GetImage", req, resp))
-	h.Equals(t, client.ImageID, resp.Images[0].ID)
-
-	req = &rpc.ContainerImageRequest{
-		ID: "asdfasdfa",
-	}
-	resp = &rpc.ContainerImageResponse{}
+	resp = &rpc.ImageResponse{}
 
 	h.Assert(t, client.rpc.Do("MDocker.GetImage", req, resp) != nil, "bad id should error")
 }
@@ -97,9 +89,9 @@ func TestDeleteImage(t *testing.T) {
 	pullMainImage(t)
 	deleteMainImage(t)
 
-	req := &rpc.ContainerImageRequest{
-		Name: client.ImageName,
+	req := &rpc.ImageRequest{
+		Id: client.ImageName,
 	}
-	resp := &rpc.ContainerImageResponse{}
+	resp := &rpc.ImageResponse{}
 	h.Assert(t, client.rpc.Do("MDocker.DeleteImage", req, resp) != nil, "deleting missing image should error")
 }
