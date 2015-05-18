@@ -23,5 +23,12 @@ func (md *MDocker) RunHTTP(port uint) error {
 		return err
 	}
 
-	return server.ListenAndServe()
+	if err := server.ListenAndServe(); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"func":  "server.ListenAndServe",
+		}).Error("failed to run server")
+		return err
+	}
+	return nil
 }

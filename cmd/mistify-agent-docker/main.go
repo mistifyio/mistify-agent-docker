@@ -44,5 +44,7 @@ func main() {
 	}
 
 	// Create and run the HTTP server
-	_ = md.RunHTTP(port)
+	if err := md.RunHTTP(port); err != nil {
+		os.Exit(1)
+	}
 }
