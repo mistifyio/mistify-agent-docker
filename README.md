@@ -72,7 +72,7 @@ MDocker is the Mistify Docker subagent service
 #### func  New
 
 ```go
-func New(endpoint, tlsCertPath string) (*MDocker, error)
+func New(endpoint, imageService, tlsCertPath string) (*MDocker, error)
 ```
 New creates a new MDocker with a docker client
 
@@ -118,6 +118,14 @@ func (md *MDocker) GetInfo(h *http.Request, request *struct{}, response *docker.
 ```
 GetInfo provides general information about the system from Docker
 
+#### func (*MDocker) ImportImage
+
+```go
+func (md *MDocker) ImportImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
+```
+ImportImage downloads a new container image from the image service and imports
+it into Docker
+
 #### func (*MDocker) ListContainers
 
 ```go
@@ -138,13 +146,6 @@ ListImages retrieves a list of Docker images
 func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
 ```
 PauseContainer pauses a Docker container
-
-#### func (*MDocker) PullImage
-
-```go
-func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
-```
-PullImage downloads a new Docker image
 
 #### func (*MDocker) RebootContainer
 
