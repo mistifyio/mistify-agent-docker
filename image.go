@@ -221,7 +221,7 @@ func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ImageRequest, respo
 	}
 
 	opts := docker.RemoveImageOptions{}
-	if err := md.client.RemoveImageExtended(image.ID, opts); err != nil {
+	if err := md.client.RemoveImageExtended(request.Id, opts); err != nil {
 		return err
 	}
 
