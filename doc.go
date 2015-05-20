@@ -10,7 +10,7 @@ HTTP API Endpoint
 Request Structure
 
     {
-        "method": "RPC_METHOD",
+        "method": "MDocker.RPC_METHOD",
         "params": [
             DATA_STRUCT
         ],
@@ -49,7 +49,7 @@ RPC Methods
 
     ListImages
     GetImages
-    PullImage
+    LoadImage
     DeleteImage
 
 See the godocs and function signatures for each method's purpose and expected
