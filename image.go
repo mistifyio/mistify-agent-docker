@@ -2,6 +2,8 @@ package mdocker
 
 import (
 	"archive/tar"
+	"bufio"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -86,9 +88,26 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 			}
 		}
 
+		// Use a response buffer so the first few bytes can be peeked at for
+		// file type detection. Uncompress the image if it is gzipped
+		responseBuffer := bufio.NewReader(resp.Body)
+		var imageReader io.Reader = responseBuffer
+		filetypeBytes, err := responseBuffer.Peek(512)
+		if err != nil {
+			return err
+		}
+		if http.DetectContentType(filetypeBytes) == "application/x-gzip" {
+			gzipReader, err := gzip.NewReader(responseBuffer)
+			if err != nil {
+				return err
+			}
+			defer gzipReader.Close()
+			imageReader = gzipReader
+		}
+
 		pipeReader, pipeWriter := io.Pipe()
 
-		go fixRepositoriesFile(repo, resp.Body, pipeWriter)
+		go fixRepositoriesFile(repo, imageReader, pipeWriter)
 
 		opts := docker.LoadImageOptions{
 			InputStream: pipeReader,
