@@ -149,7 +149,7 @@ func mockImageService(imageFile string, port int) {
 	router.HandleFunc("/images/{imageID}/download", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		if vars["imageID"] != "mistify-docker-agent-test" {
-			http.Error(w, "", 404)
+			http.Error(w, "", http.StatusNotFound)
 			return
 		}
 
