@@ -193,17 +193,9 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 					log.WithField("error", err).Error("failed to write repositories json")
 					return
 				}
-			} else {
-				// Direct copy
-				if err := tarWriter.WriteHeader(header); err != nil {
-					log.WithField("error", err).Error("failed to write tar header")
-					return
-				}
-				if _, err := io.Copy(tarWriter, tarReader); err != nil {
-					log.WithField("error", err).Error("failed to copy tar file")
-					return
-				}
+				continue
 			}
+			fallthrough
 		default:
 			// Direct copy
 			if err := tarWriter.WriteHeader(header); err != nil {
