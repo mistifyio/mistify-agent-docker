@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -153,21 +154,29 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 			// Update the image name in the repositories file
 			if header.Name == "repositories" {
 				// Read the file and parse the JSON
-				origRepo := map[string]interface{}{}
+				repoMap := map[string]interface{}{}
 				jsonDecoder := json.NewDecoder(tarReader)
-				if err := jsonDecoder.Decode(&origRepo); err != nil {
+				if err := jsonDecoder.Decode(&repoMap); err != nil {
 					log.WithField("error", err).Error("failed to parse repositories json")
 					return
 				}
+
 				// Should only be one key. Replace it with the new repo name
-				newRepo := map[string]interface{}{}
-				for oldName := range origRepo {
-					newRepo[newName] = origRepo[oldName]
+				if len(repoMap) != 1 {
+					log.WithFields(log.Fields{
+						"error":   errors.New("incorrect number of repos"),
+						"repoMap": repoMap,
+					}).Error("must be only one repo specified")
+					return
+				}
+				for oldName := range repoMap {
+					repoMap[newName] = repoMap[oldName]
+					delete(repoMap, oldName)
 					break
 				}
 
 				// Update the header
-				outBytes, err := json.Marshal(newRepo)
+				outBytes, err := json.Marshal(repoMap)
 				if err != nil {
 					log.WithField("error", err).Error("failed to marshal repositories json")
 					return
