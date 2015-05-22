@@ -153,13 +153,9 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 			// Update the image name in the repositories file
 			if header.Name == "repositories" {
 				// Read the file and parse the JSON
-				inBytes := make([]byte, header.Size)
-				if _, err := tarReader.Read(inBytes); err != nil {
-					log.WithField("error", err).Error("failed to read repositories file")
-					return
-				}
 				origRepo := map[string]interface{}{}
-				if err := json.Unmarshal(inBytes, &origRepo); err != nil {
+				jsonDecoder := json.NewDecoder(tarReader)
+				if err := jsonDecoder.Decode(&origRepo); err != nil {
 					log.WithField("error", err).Error("failed to parse repositories json")
 					return
 				}
