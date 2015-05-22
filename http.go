@@ -1,26 +1,9 @@
 package mdocker
 
 import (
-	"fmt"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-agent/rpc"
 )
-
-type (
-	// ErrorHTTPCode should be used for errors resulting from an http response
-	// code not matching the expected code
-	ErrorHTTPCode struct {
-		Expected int
-		Code     int
-		Source   string
-	}
-)
-
-// Error returns a string error message
-func (e ErrorHTTPCode) Error() string {
-	return fmt.Sprintf("unexpected http response code: expected %d, received %d, url: %s", e.Expected, e.Code, e.Source)
-}
 
 // RunHTTP creates and runs the RPC HTTP server
 func (md *MDocker) RunHTTP(port uint) error {
