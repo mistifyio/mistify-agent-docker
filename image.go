@@ -57,20 +57,20 @@ func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response
 // LoadImage downloads a new container image from the image service and
 // imports it into Docker
 func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
-	repo := request.Id
+	name := request.Id
 
 	// Check if we already have the image to avoid unnecessary pulling
-	image, err := md.client.InspectImage(repo)
+	image, err := md.client.InspectImage(name)
 	if err != nil && err != docker.ErrNoSuchImage {
 		return err
 	}
 
 	if image == nil {
-		// Docker Import lets the image repo get renamed, but it strips
-		// metadata (which includes the set cmd). Docker Load doesn't let the
-		// repo get renamed and doesn't return the image id or repo after
+		// Docker Import lets the image get renamed, but it strips metadata
+		// (which includes any CMD that had been set). Docker Load doesn't let
+		// the image get renamed and doesn't return the image id or name after
 		// loading, but does preserve metadata. Since a rename to use the
-		// image-service assigned id and metadata with cmd are both necessary,
+		// image-service assigned id and metadata with CMD are both necessary,
 		// the only way forward is to update the repositories file inside and
 		// then load it.
 		source := fmt.Sprintf("http://%s/images/%s/download", md.imageService, request.Id)
@@ -107,7 +107,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 
 		pipeReader, pipeWriter := io.Pipe()
 
-		go fixRepositoriesFile(repo, imageReader, pipeWriter)
+		go fixRepositoriesFile(name, imageReader, pipeWriter)
 
 		opts := docker.LoadImageOptions{
 			InputStream: pipeReader,
@@ -116,7 +116,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 			return err
 		}
 
-		image, err = md.client.InspectImage(repo)
+		image, err = md.client.InspectImage(name)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 	return nil
 }
 
-func fixRepositoriesFile(newRepoName string, in io.Reader, out io.WriteCloser) {
+func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 	defer out.Close()
 	tarReader := tar.NewReader(in)
 	tarWriter := tar.NewWriter(out)
@@ -150,7 +150,7 @@ func fixRepositoriesFile(newRepoName string, in io.Reader, out io.WriteCloser) {
 
 		switch header.Typeflag {
 		case tar.TypeReg:
-			// Update the repo name tarReader the repositories file
+			// Update the image name in the repositories file
 			if header.Name == "repositories" {
 				// Read the file and parse the JSON
 				inBytes := make([]byte, header.Size)
@@ -166,7 +166,7 @@ func fixRepositoriesFile(newRepoName string, in io.Reader, out io.WriteCloser) {
 				// Should only be one key. Replace it with the new repo name
 				newRepo := map[string]interface{}{}
 				for oldName := range origRepo {
-					newRepo[newRepoName] = origRepo[oldName]
+					newRepo[newName] = origRepo[oldName]
 					break
 				}
 
