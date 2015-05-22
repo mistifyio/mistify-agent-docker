@@ -19,7 +19,7 @@ func main() {
 	flag.UintVarP(&port, "port", "p", 30001, "listen port")
 	flag.StringVarP(&endpoint, "endpoint", "e", "unix:///var/run/docker.sock", "docker endpoint")
 	flag.StringVarP(&tlsCertPath, "docker-cert-path", "d", os.Getenv("DOCKER_CERT_PATH"), "docker tls cert path")
-	flag.StringVarP(&imageService, "image-service", "i", "images.service.lochness.local:20000", "image service")
+	flag.StringVarP(&imageService, "image-service", "i", "images.service.lochness.local", "image service")
 	flag.StringVarP(&logLevel, "log-level", "l", "warning", "log level: debug/info/warning/error/critical/fatal")
 	flag.Parse()
 
@@ -43,20 +43,16 @@ func main() {
 
 	// Parse image service and do any necessary lookups
 	// Using strings.Split instead of net.SplitHostPort since the latter errors
-	// it no port is present and it doesn't provide any error type checking
+	// if no port is present and it doesn't provide any error type checking
 	// convenience methods
+	// TODO: not ipv6 compatible
 	imageServiceParts := strings.Split(imageService, ":")
 	partsLength := len(imageServiceParts)
 	// Empty or too many colons
 	if partsLength == 0 || partsLength > 2 {
 		log.WithField("imageService", imageService).Fatal("invalid image-service value")
 	}
-	// Default to localhost if only port is provided
-	if partsLength == 2 {
-		if imageServiceParts[0] == "" {
-			imageServiceParts[0] = "localhost"
-		}
-	}
+
 	// Try to lookup port if only host/service is provided
 	if partsLength == 1 || imageServiceParts[1] == "" {
 		_, addrs, err := net.LookupSRV("", "", imageService)
