@@ -13,7 +13,7 @@ exposed via JSON-RPC over HTTP.
 ### Request Structure
 
     {
-        "method": "RPC_METHOD",
+        "method": "MDocker.RPC_METHOD",
         "params": [
             DATA_STRUCT
         ],
@@ -52,13 +52,33 @@ defined in http://godoc.org/github.com/mistifyio/mistify-agent/rpc .
 
     ListImages
     GetImages
-    PullImage
+    LoadImage
     DeleteImage
 
 See the godocs and function signatures for each method's purpose and expected
 request/response structs.
 
 ## Usage
+
+#### type ErrorHTTPCode
+
+```go
+type ErrorHTTPCode struct {
+	Expected int
+	Code     int
+	Source   string
+}
+```
+
+ErrorHTTPCode should be used for errors resulting from an http response code not
+matching the expected code
+
+#### func (ErrorHTTPCode) Error
+
+```go
+func (e ErrorHTTPCode) Error() string
+```
+Error returns a string error message
 
 #### type MDocker
 
@@ -72,7 +92,7 @@ MDocker is the Mistify Docker subagent service
 #### func  New
 
 ```go
-func New(endpoint, tlsCertPath string) (*MDocker, error)
+func New(endpoint, imageService, tlsCertPath string) (*MDocker, error)
 ```
 New creates a new MDocker with a docker client
 
@@ -132,19 +152,20 @@ func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, respon
 ```
 ListImages retrieves a list of Docker images
 
+#### func (*MDocker) LoadImage
+
+```go
+func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
+```
+LoadImage downloads a new container image from the image service and imports it
+into Docker
+
 #### func (*MDocker) PauseContainer
 
 ```go
 func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
 ```
 PauseContainer pauses a Docker container
-
-#### func (*MDocker) PullImage
-
-```go
-func (md *MDocker) PullImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error
-```
-PullImage downloads a new Docker image
 
 #### func (*MDocker) RebootContainer
 

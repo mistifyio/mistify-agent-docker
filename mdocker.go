@@ -17,13 +17,14 @@ type (
 
 	// MDocker is the Mistify Docker subagent service
 	MDocker struct {
-		endpoint string
-		client   *docker.Client
+		endpoint     string
+		imageService string
+		client       *docker.Client
 	}
 )
 
 // New creates a new MDocker with a docker client
-func New(endpoint, tlsCertPath string) (*MDocker, error) {
+func New(endpoint, imageService, tlsCertPath string) (*MDocker, error) {
 	// Create a new Docker client
 	var client *docker.Client
 	var err error
@@ -65,8 +66,9 @@ func New(endpoint, tlsCertPath string) (*MDocker, error) {
 	}
 
 	return &MDocker{
-		endpoint: endpoint,
-		client:   client,
+		endpoint:     endpoint,
+		imageService: imageService,
+		client:       client,
 	}, nil
 }
 

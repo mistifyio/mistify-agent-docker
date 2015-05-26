@@ -7,49 +7,49 @@ import (
 	"github.com/mistifyio/mistify-agent/rpc"
 )
 
-func pullMainImage(t *testing.T) {
-	if client.ImageID != "" {
+func importMainImage(t *testing.T) {
+	if client.ImageImported {
 		return
 	}
 	req := &rpc.ImageRequest{
-		Source: client.ImageName,
+		Id: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 
-	h.Ok(t, client.rpc.Do("MDocker.PullImage", req, resp))
+	h.Ok(t, client.rpc.Do("MDocker.LoadImage", req, resp))
 	h.Equals(t, 1, len(resp.Images))
 
-	client.ImageID = resp.Images[0].Id
+	client.ImageImported = true
 }
 
 func deleteMainImage(t *testing.T) {
-	if client.ImageID == "" {
+	if !client.ImageImported {
 		return
 	}
 	req := &rpc.ImageRequest{
-		Id: client.ImageName,
+		Id: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", req, resp))
-	client.ImageID = ""
+	client.ImageImported = false
 }
 
-func TestPullImage(t *testing.T) {
+func TestLoadImage(t *testing.T) {
 	badreq := &rpc.ImageRequest{
-		Source: "asdfqewrty",
+		Id: "asdfqewrty",
 	}
 	badresp := &rpc.ImageResponse{}
 
-	h.Assert(t, client.rpc.Do("MDocker.PullImage", badreq, badresp) != nil, "bad image id should error")
+	h.Assert(t, client.rpc.Do("MDocker.LoadImage", badreq, badresp) != nil, "bad image id should error")
 
-	// Make sure we're pulling a fresh image
+	// Make sure we're importing a fresh image
 	deleteMainImage(t)
-	pullMainImage(t)
+	importMainImage(t)
 }
 
 func TestListImages(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 
 	req := &rpc.ImageRequest{}
 	resp := &rpc.ImageResponse{}
@@ -63,11 +63,11 @@ func TestListImages(t *testing.T) {
 			break
 		}
 	}
-	h.Assert(t, found, "did not find pulled image in list")
+	h.Assert(t, found, "did not find imported image in list")
 }
 
 func TestGetImage(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 
 	req := &rpc.ImageRequest{
 		Id: client.ImageID,
@@ -86,11 +86,11 @@ func TestGetImage(t *testing.T) {
 }
 
 func TestDeleteImage(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	deleteMainImage(t)
 
 	req := &rpc.ImageRequest{
-		Id: client.ImageName,
+		Id: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 	h.Assert(t, client.rpc.Do("MDocker.DeleteImage", req, resp) != nil, "deleting missing image should error")

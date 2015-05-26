@@ -14,7 +14,7 @@ func newGuest() *rpcClient.Guest {
 	return &rpcClient.Guest{
 		Id:    "foobar",
 		Type:  "container",
-		Image: client.ImageName,
+		Image: client.ImageID,
 	}
 }
 
@@ -49,7 +49,7 @@ func deleteMainContainer(t *testing.T) {
 }
 
 func TestCreateContainer(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	deleteMainContainer(t)
 	createMainContainer(t)
 
@@ -67,7 +67,7 @@ func TestCreateContainer(t *testing.T) {
 }
 
 func TestListContainers(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	createMainContainer(t)
 
 	req := &rpc.ContainerRequest{
@@ -81,7 +81,7 @@ func TestListContainers(t *testing.T) {
 }
 
 func TestGetContainer(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	createMainContainer(t)
 
 	req := &rpc.ContainerRequest{
@@ -93,7 +93,7 @@ func TestGetContainer(t *testing.T) {
 }
 
 func TestSaveContainer(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	createMainContainer(t)
 
 	req := &rpc.ContainerRequest{
@@ -114,7 +114,7 @@ func TestSaveContainer(t *testing.T) {
 }
 
 func TestStartContainer(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	createMainContainer(t)
 
 	badreq := &rpc.GuestRequest{
@@ -141,7 +141,7 @@ func TestStartContainer(t *testing.T) {
 }
 
 func TestStopContainer(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	createMainContainer(t)
 
 	badreq := &rpc.GuestRequest{
@@ -164,7 +164,7 @@ func TestStopContainer(t *testing.T) {
 }
 
 func TestDeleteContainer(t *testing.T) {
-	pullMainImage(t)
+	importMainImage(t)
 	createMainContainer(t)
 	deleteMainContainer(t)
 }
