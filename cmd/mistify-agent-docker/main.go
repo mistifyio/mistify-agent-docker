@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"os"
-	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/lochness/pkg/hostport"
@@ -63,7 +63,7 @@ func main() {
 		if len(addrs) == 0 {
 			log.WithField("imageService", iHost).Fatal("invalid host value")
 		}
-		iPort = strconv.FormatUint(uint64(addrs[0].Port), 10)
+		iPort = fmt.Sprintf("%d", addrs[0].Port)
 	}
 	imageService = net.JoinHostPort(iHost, iPort)
 
