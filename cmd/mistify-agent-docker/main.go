@@ -1,12 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/mistifyio/lochness/pkg/hostport"
 	"github.com/mistifyio/mistify-agent-docker"
 	logx "github.com/mistifyio/mistify-logrus-ext"
 	flag "github.com/ogier/pflag"
@@ -42,20 +42,18 @@ func main() {
 	}).Info("configuration")
 
 	// Parse image service and do any necessary lookups
-	// Using strings.Split instead of net.SplitHostPort since the latter errors
-	// if no port is present and it doesn't provide any error type checking
-	// convenience methods
-	// TODO: not ipv6 compatible
-	imageServiceParts := strings.Split(imageService, ":")
-	partsLength := len(imageServiceParts)
-	// Empty or too many colons
-	if partsLength == 0 || partsLength > 2 {
-		log.WithField("imageService", imageService).Fatal("invalid image-service value")
+	iHost, iPort, err := hostport.Split(imageService)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":        err,
+			"imageService": imageService,
+			"func":         "hostport.Split",
+		}).Fatal("host port split failed")
 	}
 
 	// Try to lookup port if only host/service is provided
-	if partsLength == 1 || imageServiceParts[1] == "" {
-		_, addrs, err := net.LookupSRV("", "", imageService)
+	if iPort == "" {
+		_, addrs, err := net.LookupSRV("", "", iHost)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
@@ -63,11 +61,11 @@ func main() {
 			}).Fatal("srv lookup failed")
 		}
 		if len(addrs) == 0 {
-			log.WithField("imageService", imageService).Fatal("invalid image-service value")
+			log.WithField("imageService", iHost).Fatal("invalid host value")
 		}
-		imageServiceParts[1] = strconv.FormatUint(uint64(addrs[0].Port), 10)
+		iPort = fmt.Sprintf("%d", addrs[0].Port)
 	}
-	imageService = net.JoinHostPort(imageServiceParts[0], imageServiceParts[1])
+	imageService = net.JoinHostPort(iHost, iPort)
 
 	// Create the MDocker instance
 	md, err := mdocker.New(endpoint, imageService, tlsCertPath)
