@@ -145,6 +145,14 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 		},
 		HostConfig: &docker.HostConfig{
 			PublishAllPorts: true,
+			// Expose /dev/zfs inside all containers (okay because they are unprivileged)
+			Devices: []docker.Device{
+				docker.Device{
+					PathOnHost: "/dev/zfs",
+					PathInContainer: "/dev/zfs",
+					CgroupPermissions: "rwm",
+				},
+			},
 		},
 	}
 	container, err := md.client.CreateContainer(opts)
