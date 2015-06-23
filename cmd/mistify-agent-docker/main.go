@@ -19,7 +19,7 @@ func main() {
 	flag.UintVarP(&port, "port", "p", 30001, "listen port")
 	flag.StringVarP(&endpoint, "endpoint", "e", "unix:///var/run/docker.sock", "docker endpoint")
 	flag.StringVarP(&tlsCertPath, "docker-cert-path", "d", os.Getenv("DOCKER_CERT_PATH"), "docker tls cert path")
-	flag.StringVarP(&imageService, "image-service", "i", "images.service.lochness.local", "image service. srv query used to find port if not specified")
+	flag.StringVarP(&imageService, "image-service", "i", "image.services.lochness.local", "image service. srv query used to find port if not specified")
 	flag.StringVarP(&logLevel, "log-level", "l", "warning", "log level: debug/info/warning/error/critical/fatal")
 	flag.Parse()
 
