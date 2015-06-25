@@ -133,6 +133,8 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 	return nil
 }
 
+// fixRepositoriesFile changes the repo name to the mistify-image-service's
+// assigned image id and tag to "latest" before it is loaded into docker
 func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 	defer out.Close()
 	tarReader := tar.NewReader(in)
@@ -151,10 +153,11 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 
 		switch header.Typeflag {
 		case tar.TypeReg:
-			// Update the image name in the repositories file
+			// Update the image name and tag in the repositories file
 			if header.Name == "repositories" {
 				// Read the file and parse the JSON
-				repoMap := map[string]interface{}{}
+				// {"reponame":{"tag":"hash"}}
+				repoMap := map[string]map[string]string{}
 				jsonDecoder := json.NewDecoder(tarReader)
 				if err := jsonDecoder.Decode(&repoMap); err != nil {
 					log.WithField("error", err).Error("failed to parse repositories json")
@@ -170,9 +173,25 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 					return
 				}
 				for oldName := range repoMap {
-					repoMap[newName] = repoMap[oldName]
+					tagMap := repoMap[oldName]
+					// Should only be one tag. Replace it with the new repo name
+					if len(tagMap) != 1 {
+						log.WithFields(log.Fields{
+							"error":   errors.New("incorrect number of tags"),
+							"repoMap": repoMap,
+						}).Error("must be only one tag specified")
+						return
+					}
+					for oldTag := range tagMap {
+						// Only rename if the tag is not already "latest"
+						if oldTag == "latest" {
+							break
+						}
+						tagMap["latest"] = tagMap[oldTag]
+						delete(tagMap, oldTag)
+					}
+					repoMap[newName] = tagMap
 					delete(repoMap, oldName)
-					break
 				}
 
 				// Update the header
