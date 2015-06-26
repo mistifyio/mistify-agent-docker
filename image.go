@@ -174,6 +174,8 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 				}
 				for oldName := range repoMap {
 					tagMap := repoMap[oldName]
+					delete(repoMap, oldName)
+
 					// Should only be one tag. Replace it with the new repo name
 					if len(tagMap) != 1 {
 						log.WithFields(log.Fields{
@@ -191,7 +193,6 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 						delete(tagMap, oldTag)
 					}
 					repoMap[newName] = tagMap
-					delete(repoMap, oldName)
 				}
 
 				// Update the header
