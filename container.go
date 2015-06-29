@@ -136,6 +136,9 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 		return err
 	}
 	guest := request.Guest
+	// TODO: Some of these options might be better handled as guest metadata
+	// instead of hardcoding, such as the openstdin option, port forwarding,
+	// and zfs devices
 	opts := docker.CreateContainerOptions{
 		Name: containerName,
 		Config: &docker.Config{
