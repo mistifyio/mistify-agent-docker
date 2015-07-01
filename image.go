@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/mistifyio/mistify-agent/rpc"
+	netutil "github.com/mistifyio/util/net"
 )
 
 // ListImages retrieves a list of Docker images
@@ -74,7 +75,11 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 		// image-service assigned id and metadata with CMD are both necessary,
 		// the only way forward is to update the repositories file inside and
 		// then load it.
-		source := fmt.Sprintf("http://%s/images/%s/download", md.imageService, request.Id)
+		hostport, err := netutil.HostWithPort(md.imageService)
+		if err != nil {
+			return err
+		}
+		source := fmt.Sprintf("http://%s/images/%s/download", hostport, request.Id)
 		resp, err := http.Get(source)
 		if err != nil {
 			return err
