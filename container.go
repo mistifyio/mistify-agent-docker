@@ -182,10 +182,7 @@ func (md *MDocker) StartContainer(h *http.Request, request *rpc.GuestRequest, re
 	if err != nil {
 		return err
 	}
-	hostConfig := &docker.HostConfig{
-		PublishAllPorts: true,
-	}
-	err = md.client.StartContainer(containerName, hostConfig)
+	err = md.client.StartContainer(containerName, nil)
 	if err, ok := err.(*docker.ContainerAlreadyRunning); err != nil && !ok {
 		return err
 	}
