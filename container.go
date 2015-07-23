@@ -149,7 +149,9 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 			Memory:     int64(guest.Memory) * 1024 * 1024, // Convert MB to bytes
 		},
 		HostConfig: &docker.HostConfig{
-			PublishAllPorts: true,
+			// A network interface will be added separately. The "none" option
+			// may not be listed in the docker remote api docs, but it works
+			NetworkMode: "none",
 			// Expose /dev/zfs inside all containers (okay because they are unprivileged)
 			Devices: []docker.Device{
 				docker.Device{
@@ -178,6 +180,12 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 
 // StartContainer starts a Docker container
 func (md *MDocker) StartContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error {
+	// Make sure there are no lingering interfaces for the guest from a previous
+	// run
+	if err := removeInterfaces(request.Guest); err != nil {
+		return err
+	}
+
 	containerName, err := requestContainerName(request)
 	if err != nil {
 		return err
@@ -196,11 +204,16 @@ func (md *MDocker) StartContainer(h *http.Request, request *rpc.GuestRequest, re
 
 	response.Guest = request.Guest
 	response.Guest.State = state
+
+	if err := addInterfaces(request.Guest); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // StopContainer stops a Docker container or kills it after a timeout
-func (md *MDocker) StopContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error {
+func (md *MDocker) StopContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error {
 	containerName, err := requestContainerName(request)
 	if err != nil {
 		return err
@@ -219,38 +232,39 @@ func (md *MDocker) StopContainer(h *http.Request, request *rpc.GuestRequest, res
 
 	response.Guest = request.Guest
 	response.Guest.State = state
+
+	// The virtual interfaces are destroyed when the container stops, but are
+	// still being tracked in OVS. Clean things up.
+	if err := removeInterfaces(request.Guest); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // RestartContainer restarts a Docker container
-func (md *MDocker) RestartContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error {
-	containerName, err := requestContainerName(request)
-	if err != nil {
+func (md *MDocker) RestartContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error {
+	// Since action needs to be taken relating to network interfaces when the guest
+	// is stopped and again when the guest is started, the individual methods are
+	// used here. The `docker restart` command is an alias for a stop then start
+	// anyway.
+	if err := md.StopContainer(h, request, response); err != nil {
 		return err
 	}
-	if err := md.client.RestartContainer(containerName, 60); err != nil {
-		return err
-	}
-	state, err := md.fetchContainerState(containerName)
-	if err != nil {
-		return err
-	}
-	if err := assertContainerState(cStateRunning, state); err != nil {
+	if err := md.StartContainer(h, request, response); err != nil {
 		return err
 	}
 
-	response.Guest = request.Guest
-	response.Guest.State = state
 	return nil
 }
 
 // RebootContainer restarts a Docker container
-func (md *MDocker) RebootContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error {
+func (md *MDocker) RebootContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error {
 	return md.RestartContainer(h, request, response)
 }
 
 // PauseContainer pauses a Docker container
-func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error {
+func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error {
 	containerName, err := requestContainerName(request)
 	if err != nil {
 		return err
@@ -272,7 +286,7 @@ func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, re
 }
 
 // UnpauseContainer restarts a Docker container
-func (md *MDocker) UnpauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error {
+func (md *MDocker) UnpauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error {
 	containerName, err := requestContainerName(request)
 	if err != nil {
 		return err

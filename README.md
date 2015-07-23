@@ -163,14 +163,14 @@ into Docker
 #### func (*MDocker) PauseContainer
 
 ```go
-func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
+func (md *MDocker) PauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error
 ```
 PauseContainer pauses a Docker container
 
 #### func (*MDocker) RebootContainer
 
 ```go
-func (md *MDocker) RebootContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
+func (md *MDocker) RebootContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error
 ```
 RebootContainer restarts a Docker container
 
@@ -185,7 +185,7 @@ stored in interface{} don't convert directly, so use JSON as an intermediate
 #### func (*MDocker) RestartContainer
 
 ```go
-func (md *MDocker) RestartContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
+func (md *MDocker) RestartContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error
 ```
 RestartContainer restarts a Docker container
 
@@ -213,14 +213,14 @@ StartContainer starts a Docker container
 #### func (*MDocker) StopContainer
 
 ```go
-func (md *MDocker) StopContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
+func (md *MDocker) StopContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error
 ```
 StopContainer stops a Docker container or kills it after a timeout
 
 #### func (*MDocker) UnpauseContainer
 
 ```go
-func (md *MDocker) UnpauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestRequest) error
+func (md *MDocker) UnpauseContainer(h *http.Request, request *rpc.GuestRequest, response *rpc.GuestResponse) error
 ```
 UnpauseContainer restarts a Docker container
 
