@@ -12,7 +12,7 @@ func importMainImage(t *testing.T) {
 		return
 	}
 	req := &rpc.ImageRequest{
-		Id: client.ImageID,
+		ID: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 
@@ -27,7 +27,7 @@ func deleteMainImage(t *testing.T) {
 		return
 	}
 	req := &rpc.ImageRequest{
-		Id: client.ImageID,
+		ID: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 
@@ -37,7 +37,7 @@ func deleteMainImage(t *testing.T) {
 
 func TestLoadImage(t *testing.T) {
 	badreq := &rpc.ImageRequest{
-		Id: "asdfqewrty",
+		ID: "asdfqewrty",
 	}
 	badresp := &rpc.ImageResponse{}
 
@@ -58,7 +58,7 @@ func TestListImages(t *testing.T) {
 
 	found := false
 	for _, i := range resp.Images {
-		if i.Id == client.ImageID {
+		if i.ID == client.ImageID {
 			found = true
 			break
 		}
@@ -70,15 +70,15 @@ func TestGetImage(t *testing.T) {
 	importMainImage(t)
 
 	req := &rpc.ImageRequest{
-		Id: client.ImageID,
+		ID: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.GetImage", req, resp))
-	h.Equals(t, client.ImageID, resp.Images[0].Id)
+	h.Equals(t, client.ImageID, resp.Images[0].ID)
 
 	req = &rpc.ImageRequest{
-		Id: "asdfasdfa",
+		ID: "asdfasdfa",
 	}
 	resp = &rpc.ImageResponse{}
 
@@ -90,7 +90,7 @@ func TestDeleteImage(t *testing.T) {
 	deleteMainImage(t)
 
 	req := &rpc.ImageRequest{
-		Id: client.ImageID,
+		ID: client.ImageID,
 	}
 	resp := &rpc.ImageResponse{}
 	h.Assert(t, client.rpc.Do("MDocker.DeleteImage", req, resp) != nil, "deleting missing image should error")

@@ -48,10 +48,10 @@ func assertContainerState(expected, actual string) error {
 }
 
 func requestContainerName(request *rpc.GuestRequest) (string, error) {
-	if request.Guest == nil || request.Guest.Id == "" {
+	if request.Guest == nil || request.Guest.ID == "" {
 		return "", errors.New("missing guest with id")
 	}
-	return request.Guest.Id, nil
+	return request.Guest.ID, nil
 }
 
 // ListContainers retrieves a list of Docker containers
@@ -121,7 +121,7 @@ func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest,
 	}
 	response.Images = []*rpc.Image{
 		&rpc.Image{
-			Id:   image.ID,
+			ID:   image.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
 		},
@@ -142,7 +142,7 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 	opts := docker.CreateContainerOptions{
 		Name: containerName,
 		Config: &docker.Config{
-			Hostname:   guest.Id,
+			Hostname:   guest.ID,
 			Image:      guest.Image,
 			OpenStdin:  true,
 			MacAddress: guest.Nics[0].Mac,

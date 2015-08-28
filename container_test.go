@@ -12,7 +12,7 @@ import (
 
 func newGuest() *rpcClient.Guest {
 	return &rpcClient.Guest{
-		Id:    "foobar",
+		ID:    "foobar",
 		Type:  "container",
 		Image: client.ImageID,
 	}
@@ -30,7 +30,7 @@ func createMainContainer(t *testing.T) {
 	resp := &rpc.GuestResponse{}
 
 	h.Ok(t, client.rpc.Do("MDocker.CreateContainer", req, resp))
-	client.ContainerName = req.Guest.Id
+	client.ContainerName = req.Guest.ID
 }
 
 func deleteMainContainer(t *testing.T) {
@@ -55,7 +55,7 @@ func TestCreateContainer(t *testing.T) {
 
 	req := &rpc.GuestRequest{
 		Guest: &rpcClient.Guest{
-			Id:    "foobar",
+			ID:    "foobar",
 			Type:  "container",
 			Image: "asdfasdfpoih",
 		},
@@ -107,7 +107,7 @@ func TestSaveContainer(t *testing.T) {
 	h.Ok(t, client.rpc.Do("MDocker.SaveContainer", req, resp))
 
 	ireq := &rpc.ImageRequest{
-		Id: "test-commit",
+		ID: "test-commit",
 	}
 	iresp := &rpc.ImageResponse{}
 	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", ireq, iresp))
@@ -119,7 +119,7 @@ func TestStartContainer(t *testing.T) {
 
 	badreq := &rpc.GuestRequest{
 		Guest: &rpcClient.Guest{
-			Id:    "foobar2",
+			ID:    "foobar2",
 			Type:  "container",
 			Image: "asdfasdfpoih",
 		},
@@ -146,7 +146,7 @@ func TestStopContainer(t *testing.T) {
 
 	badreq := &rpc.GuestRequest{
 		Guest: &rpcClient.Guest{
-			Id:    "foobar2",
+			ID:    "foobar2",
 			Type:  "container",
 			Image: "asdfasdfpoih",
 		},
