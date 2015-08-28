@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/mistifyio/mistify-agent/rpc"
+	logx "github.com/mistifyio/mistify-logrus-ext"
 	netutil "github.com/mistifyio/util/net"
 )
 
@@ -84,7 +85,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close response body")
 
 		if resp.StatusCode != http.StatusOK {
 			return ErrorHTTPCode{
@@ -107,7 +108,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 			if err != nil {
 				return err
 			}
-			defer gzipReader.Close()
+			defer logx.LogReturnedErr(gzipReader.Close, nil, "failed to close gzipreader")
 			imageReader = gzipReader
 		}
 
@@ -141,10 +142,10 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 // fixRepositoriesFile changes the repo name to the mistify-image-service's
 // assigned image id and tag to "latest" before it is loaded into docker
 func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
-	defer out.Close()
+	defer logx.LogReturnedErr(out.Close, nil, "failed to close output stream")
 	tarReader := tar.NewReader(in)
 	tarWriter := tar.NewWriter(out)
-	defer tarWriter.Close()
+	defer logx.LogReturnedErr(tarWriter.Close, nil, "failed to close tarwriter")
 
 	for {
 		header, err := tarReader.Next()

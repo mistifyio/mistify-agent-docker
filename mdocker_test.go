@@ -51,7 +51,9 @@ func TestMain(m *testing.M) {
 		log.Fatal("Can't create mdocker:", err)
 	}
 
-	go md.RunHTTP(port)
+	go logx.LogReturnedErr(func() error { return md.RunHTTP(port) }, log.Fields{
+		"port": port,
+	}, "failed to run HTTP server")
 	time.Sleep(1 * time.Second)
 
 	client = TestClient{
@@ -70,7 +72,9 @@ func TestMain(m *testing.M) {
 
 	imagefile, err := prepareImageTar(dockerSocket, "tauzero/test-loop")
 	if imagefile != "" {
-		defer os.Remove(imagefile)
+		defer logx.LogReturnedErr(func() error { return os.Remove(imagefile) }, log.Fields{
+			"filename": imagefile,
+		}, "failed to remove imagefile")
 	}
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -155,9 +159,15 @@ func mockImageService(imageFile string, port int) {
 
 		w.Header().Set("Content-Type", "application/octet-stream")
 		file, _ := os.Open(imageFile)
-		defer file.Close()
+		defer logx.LogReturnedErr(file.Close, log.Fields{
+			"filename": imageFile,
+		}, "failed to close imagefile")
 
-		io.Copy(w, file)
+		if _, err := io.Copy(w, file); err != nil {
+			log.WithFields(log.Fields{
+				"filename": imageFile,
+			}).Error("failed to write imagefile to response")
+		}
 		return
 	})
 
