@@ -15,6 +15,14 @@ func newGuest() *rpcClient.Guest {
 		ID:    "foobar",
 		Type:  "container",
 		Image: client.ImageID,
+		Nics: []rpcClient.Nic{
+			rpcClient.Nic{
+				Name:    "test",
+				Network: "mistify0",
+				Mac:     "C0:B6:C5:EA:93:AC",
+				VLANs:   []int{},
+			},
+		},
 	}
 }
 

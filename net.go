@@ -62,6 +62,10 @@ func addPort(g *client.Guest, nic client.Nic) (string, error) {
 func tagPort(port string, vlanInts []int) error {
 	command := "ovs-vsctl"
 
+	if len(vlanInts) == 0 {
+		return nil
+	}
+
 	vlans := make([]string, len(vlanInts), len(vlanInts))
 	for i := 0; i < len(vlanInts); i++ {
 		vlans[i] = strconv.Itoa(vlanInts[i])
