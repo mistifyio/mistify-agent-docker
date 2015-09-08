@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/mistifyio/mistify-agent/rpc"
+	logx "github.com/mistifyio/mistify-logrus-ext"
 	netutil "github.com/mistifyio/util/net"
 )
 
@@ -29,7 +30,7 @@ func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, respon
 	for _, ai := range apiImages {
 		id, _ := docker.ParseRepositoryTag(ai.RepoTags[0])
 		images = append(images, &rpc.Image{
-			Id:   id,
+			ID:   id,
 			Type: "container",
 			Size: uint64(ai.Size) / 1024 / 1024,
 		})
@@ -41,14 +42,14 @@ func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, respon
 
 // GetImage retrieves information about a specific Docker image
 func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
-	image, err := md.client.InspectImage(request.Id)
+	image, err := md.client.InspectImage(request.ID)
 	if err != nil {
 		return err
 	}
 
 	response.Images = []*rpc.Image{
 		&rpc.Image{
-			Id:   request.Id,
+			ID:   request.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
 		},
@@ -59,7 +60,7 @@ func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response
 // LoadImage downloads a new container image from the image service and
 // imports it into Docker
 func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
-	name := request.Id
+	name := request.ID
 
 	// Check if we already have the image to avoid unnecessary pulling
 	image, err := md.client.InspectImage(name)
@@ -79,12 +80,12 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 		if err != nil {
 			return err
 		}
-		source := fmt.Sprintf("http://%s/images/%s/download", hostport, request.Id)
+		source := fmt.Sprintf("http://%s/images/%s/download", hostport, request.ID)
 		resp, err := http.Get(source)
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer logx.LogReturnedErr(resp.Body.Close, nil, "failed to close response body")
 
 		if resp.StatusCode != http.StatusOK {
 			return ErrorHTTPCode{
@@ -107,7 +108,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 			if err != nil {
 				return err
 			}
-			defer gzipReader.Close()
+			defer logx.LogReturnedErr(gzipReader.Close, nil, "failed to close gzipreader")
 			imageReader = gzipReader
 		}
 
@@ -130,7 +131,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 
 	response.Images = []*rpc.Image{
 		&rpc.Image{
-			Id:   request.Id,
+			ID:   request.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
 		},
@@ -141,10 +142,10 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 // fixRepositoriesFile changes the repo name to the mistify-image-service's
 // assigned image id and tag to "latest" before it is loaded into docker
 func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
-	defer out.Close()
+	defer logx.LogReturnedErr(out.Close, nil, "failed to close output stream")
 	tarReader := tar.NewReader(in)
 	tarWriter := tar.NewWriter(out)
-	defer tarWriter.Close()
+	defer logx.LogReturnedErr(tarWriter.Close, nil, "failed to close tarwriter")
 
 	for {
 		header, err := tarReader.Next()
@@ -237,19 +238,19 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 
 // DeleteImage deletes a Docker image
 func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ImageRequest, response *rpc.ImageResponse) error {
-	image, err := md.client.InspectImage(request.Id)
+	image, err := md.client.InspectImage(request.ID)
 	if err != nil {
 		return err
 	}
 
 	opts := docker.RemoveImageOptions{}
-	if err := md.client.RemoveImageExtended(request.Id, opts); err != nil {
+	if err := md.client.RemoveImageExtended(request.ID, opts); err != nil {
 		return err
 	}
 
 	response.Images = []*rpc.Image{
 		&rpc.Image{
-			Id:   request.Id,
+			ID:   request.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
 		},

@@ -43,7 +43,7 @@ func addPort(g *client.Guest, nic client.Nic) (string, error) {
 	args := []string{"add-port",
 		nic.Network,
 		nic.Name,
-		g.Id,
+		g.ID,
 		"--macaddress=" + nic.Mac, // ovs-docker errors if separate
 	}
 	if output, err := exec.Command(command, args...).CombinedOutput(); err != nil {
@@ -56,7 +56,7 @@ func addPort(g *client.Guest, nic client.Nic) (string, error) {
 		}).Error(e)
 		return "", e
 	}
-	return getPortForContainerInterface(g.Id, nic.Name)
+	return getPortForContainerInterface(g.ID, nic.Name)
 }
 
 func tagPort(port string, vlanInts []int) error {
@@ -110,7 +110,7 @@ func removeInterfaces(g *client.Guest) error {
 			"del-port",
 			nic.Network,
 			nic.Name,
-			g.Id,
+			g.ID,
 		}
 		if output, err := exec.Command(command, args...).CombinedOutput(); err != nil {
 			// Ignore errors when trying to remove interface that is already gone
