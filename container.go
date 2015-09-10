@@ -136,6 +136,11 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 		return err
 	}
 	guest := request.Guest
+
+	if len(guest.Nics) == 0 {
+		return errors.New("must specify at least one nic")
+	}
+
 	// TODO: Some of these options might be better handled as guest metadata
 	// instead of hardcoding, such as the openstdin option, port forwarding,
 	// and zfs devices
