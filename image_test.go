@@ -3,95 +3,113 @@ package mdocker_test
 import (
 	"testing"
 
-	h "github.com/bakins/test-helpers"
 	"github.com/mistifyio/mistify-agent/rpc"
+	"github.com/stretchr/testify/suite"
 )
 
-func importMainImage(t *testing.T) {
-	if client.ImageImported {
-		return
-	}
-	req := &rpc.ImageRequest{
-		ID: client.ImageID,
-	}
-	resp := &rpc.ImageResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.LoadImage", req, resp))
-	h.Equals(t, 1, len(resp.Images))
-
-	client.ImageImported = true
+type ImageTestSuite struct {
+	APITestSuite
 }
 
-func deleteMainImage(t *testing.T) {
-	if !client.ImageImported {
-		return
-	}
-	req := &rpc.ImageRequest{
-		ID: client.ImageID,
-	}
-	resp := &rpc.ImageResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", req, resp))
-	client.ImageImported = false
+func TestImageTestSuite(t *testing.T) {
+	suite.Run(t, new(ImageTestSuite))
 }
 
-func TestLoadImage(t *testing.T) {
-	badreq := &rpc.ImageRequest{
-		ID: "asdfqewrty",
+func (s *ImageTestSuite) TestLoadImage() {
+	tests := []struct {
+		description string
+		requestID   string
+		expectedErr bool
+	}{
+		{"missing id", "", true},
+		{"bad id", "asdf", true},
+		{"valid id", s.ImageID, false},
 	}
-	badresp := &rpc.ImageResponse{}
 
-	h.Assert(t, client.rpc.Do("MDocker.LoadImage", badreq, badresp) != nil, "bad image id should error")
-
-	// Make sure we're importing a fresh image
-	deleteMainImage(t)
-	importMainImage(t)
-}
-
-func TestListImages(t *testing.T) {
-	importMainImage(t)
-
-	req := &rpc.ImageRequest{}
-	resp := &rpc.ImageResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.ListImages", req, resp))
-
-	found := false
-	for _, i := range resp.Images {
-		if i.ID == client.ImageID {
-			found = true
-			break
+	for _, test := range tests {
+		msg := testMsgFunc(test.description)
+		response := &rpc.ImageResponse{}
+		request := &rpc.ImageRequest{
+			ID: test.requestID,
+		}
+		err := s.Client.Do("MDocker.LoadImage", request, response)
+		if test.expectedErr {
+			s.Error(err, msg("should error"))
+		} else {
+			s.NoError(err, msg("should not error"))
+			s.Len(response.Images, 1)
+			s.Equal(test.requestID, response.Images[0].ID, msg("should be correct image"))
 		}
 	}
-	h.Assert(t, found, "did not find imported image in list")
 }
 
-func TestGetImage(t *testing.T) {
-	importMainImage(t)
+func (s *ImageTestSuite) TestListImages() {
+	_ = s.loadImage()
 
-	req := &rpc.ImageRequest{
-		ID: client.ImageID,
-	}
-	resp := &rpc.ImageResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.GetImage", req, resp))
-	h.Equals(t, client.ImageID, resp.Images[0].ID)
-
-	req = &rpc.ImageRequest{
-		ID: "asdfasdfa",
-	}
-	resp = &rpc.ImageResponse{}
-
-	h.Assert(t, client.rpc.Do("MDocker.GetImage", req, resp) != nil, "bad id should error")
+	request := &rpc.ImageRequest{}
+	response := &rpc.ImageResponse{}
+	s.NoError(s.Client.Do("MDocker.ListImages", request, response))
+	images := response.Images
+	s.Len(images, 1)
+	s.Equal(s.ImageID, images[0].ID)
 }
 
-func TestDeleteImage(t *testing.T) {
-	importMainImage(t)
-	deleteMainImage(t)
+func (s *ImageTestSuite) TestGetImage() {
+	_ = s.loadImage()
 
-	req := &rpc.ImageRequest{
-		ID: client.ImageID,
+	tests := []struct {
+		description string
+		requestID   string
+		expectedErr bool
+	}{
+		{"missing id", "", true},
+		{"bad id", "asdf", true},
+		{"valid id", s.ImageID, false},
 	}
-	resp := &rpc.ImageResponse{}
-	h.Assert(t, client.rpc.Do("MDocker.DeleteImage", req, resp) != nil, "deleting missing image should error")
+
+	for _, test := range tests {
+		msg := testMsgFunc(test.description)
+		response := &rpc.ImageResponse{}
+		request := &rpc.ImageRequest{
+			ID: test.requestID,
+		}
+		err := s.Client.Do("MDocker.GetImage", request, response)
+		if test.expectedErr {
+			s.Error(err, msg("should error"))
+		} else {
+			s.NoError(err, msg("should not error"))
+			s.Len(response.Images, 1)
+			s.Equal(test.requestID, response.Images[0].ID, msg("should be correct image"))
+		}
+	}
+}
+
+func (s *ImageTestSuite) TestDeleteImage() {
+	_ = s.loadImage()
+
+	tests := []struct {
+		description string
+		requestID   string
+		expectedErr bool
+	}{
+		{"missing id", "", true},
+		{"bad id", "asdf", true},
+		{"valid id", s.ImageID, false},
+	}
+
+	for _, test := range tests {
+		msg := testMsgFunc(test.description)
+		response := &rpc.ImageResponse{}
+		request := &rpc.ImageRequest{
+			ID: test.requestID,
+		}
+		err := s.Client.Do("MDocker.DeleteImage", request, response)
+		if test.expectedErr {
+			s.Error(err, msg("should error"))
+		} else {
+			s.NoError(err, msg("should not error"))
+			s.Len(response.Images, 1)
+			s.Equal(test.requestID, response.Images[0].ID, msg("should be correct image"))
+		}
+	}
 }
