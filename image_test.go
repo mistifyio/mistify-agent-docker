@@ -3,6 +3,7 @@ package mdocker_test
 import (
 	"testing"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-agent/rpc"
 	"github.com/stretchr/testify/suite"
 )
@@ -24,6 +25,7 @@ func (s *ImageTestSuite) TestLoadImage() {
 		{"missing id", "", true},
 		{"bad id", "asdf", true},
 		{"valid id", s.ImageID, false},
+		{"valid gzip id", "gzipID", false},
 	}
 
 	for _, test := range tests {
@@ -40,6 +42,10 @@ func (s *ImageTestSuite) TestLoadImage() {
 			s.Len(response.Images, 1)
 			s.Equal(test.requestID, response.Images[0].ID, msg("should be correct image"))
 		}
+	}
+
+	if err := s.Docker.RemoveImage("gzipID"); err != nil {
+		log.WithField("error", err).Error("failed to remove image")
 	}
 }
 
