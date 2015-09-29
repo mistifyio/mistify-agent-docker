@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os/exec"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -32,10 +33,15 @@ type APITestSuite struct {
 	Docker       *docker.Client
 	ContainerIDs []string
 	Server       *graceful.Server
+	Bridge       string
 }
 
 func (s *APITestSuite) SetupSuite() {
 	log.SetLevel(log.FatalLevel)
+
+	// Define ovs bridge
+	// This will get created when ports are added for a container.
+	s.Bridge = "mistify-agent-docker-test"
 
 	// Set up client to interact with API
 	s.Port = 54321
@@ -114,6 +120,14 @@ func (s *APITestSuite) TearDownTest() {
 	if err := s.Docker.RemoveImage(s.ImageID); err != nil {
 		log.WithField("error", err).Error("failed to remove image")
 	}
+
+	// Clean up ovs
+	if output, err := exec.Command("ovs-vsctl", "del-br", s.Bridge).CombinedOutput(); err != nil {
+		log.WithFields(log.Fields{
+			"error":  err,
+			"output": string(output),
+		}).Error("failed to remove ovs bridge")
+	}
 }
 
 func (s *APITestSuite) loadImage() *rpc.Image {
@@ -135,9 +149,9 @@ func (s *APITestSuite) createContainer() *client.Guest {
 			Nics: []client.Nic{
 				client.Nic{
 					Name:    "test",
-					Network: "mistify0",
+					Network: s.Bridge,
 					Mac:     "13:7D:DA:F2:ED:63",
-					VLANs:   []int{},
+					VLANs:   []int{1, 2, 3},
 				},
 			},
 		},
