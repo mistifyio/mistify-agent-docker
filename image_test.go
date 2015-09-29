@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mistifyio/mistify-agent/rpc"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -55,9 +56,14 @@ func (s *ImageTestSuite) TestListImages() {
 	request := &rpc.ImageRequest{}
 	response := &rpc.ImageResponse{}
 	s.NoError(s.Client.Do("MDocker.ListImages", request, response))
-	images := response.Images
-	s.Len(images, 1)
-	s.Equal(s.ImageID, images[0].ID)
+	found := false
+	for _, image := range response.Images {
+		if s.ImageID == image.ID {
+			found = true
+		}
+		s.NotEmpty(uuid.Parse(image.ID))
+	}
+	s.True(found)
 }
 
 func (s *ImageTestSuite) TestGetImage() {

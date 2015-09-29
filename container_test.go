@@ -68,7 +68,7 @@ func (s *ContainerTestSuite) TestCreateContainer() {
 }
 
 func (s *ContainerTestSuite) TestListContainers() {
-	_ = s.createContainer()
+	guest := s.createContainer()
 
 	request := &rpc.ContainerRequest{
 		Opts: &docker.ListContainersOptions{
@@ -78,7 +78,15 @@ func (s *ContainerTestSuite) TestListContainers() {
 	response := &rpc.ContainerResponse{}
 
 	s.NoError(s.Client.Do("MDocker.ListContainers", request, response))
-	s.Len(response.Containers, 1)
+	found := false
+	for _, container := range response.Containers {
+		name := container.Name[1:]
+		if guest.ID == name {
+			found = true
+		}
+		s.NotEmpty(uuid.Parse(name))
+	}
+	s.True(found)
 }
 
 func (s *ContainerTestSuite) TestGetContainer() {
