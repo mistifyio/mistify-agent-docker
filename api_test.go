@@ -21,6 +21,8 @@ import (
 	"github.com/tylerb/graceful"
 )
 
+var dockerImageData []byte
+
 type APITestSuite struct {
 	suite.Suite
 	Port         int
@@ -47,26 +49,11 @@ func (s *APITestSuite) SetupSuite() {
 	s.Port = 54321
 	s.Client, _ = rpc.NewClient(uint(s.Port), "")
 
-	// Get the docker image to serve
-	imgName := "tauzero/test-loop"
 	s.Docker, _ = docker.NewClient("unix:///var/run/docker.sock")
-	// Pull
-	pullOpts := docker.PullImageOptions{
-		Repository: imgName,
-	}
-	s.Require().NoError(s.Docker.PullImage(pullOpts, docker.AuthConfiguration{}))
-	// Export
-	output := new(bytes.Buffer)
-	exportOpts := docker.ExportImageOptions{
-		Name:         imgName,
-		OutputStream: output,
-	}
-	s.Require().NoError(s.Docker.ExportImage(exportOpts))
-	s.ImageData = output.Bytes()
-	s.ImageID = uuid.New()
 
-	// Remove
-	s.Require().NoError(s.Docker.RemoveImage(imgName))
+	// Set up image
+	s.ImageData = dockerImageData
+	s.ImageID = uuid.New()
 
 	// Set up a fake ImageService to fetch images from
 	s.ImageServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -183,5 +170,32 @@ func init() {
 	}
 	if err := d.Ping(); err != nil {
 		log.WithField("error", err).Fatal("could not ping docker server")
+	}
+
+	// Get the docker image to serve
+	imgName := "tauzero/test-loop"
+
+	// Pull
+	pullOpts := docker.PullImageOptions{
+		Repository: imgName,
+	}
+	if err := d.PullImage(pullOpts, docker.AuthConfiguration{}); err != nil {
+		log.WithField("error", err).Fatal("failed to pull docker image")
+	}
+	// Export
+	output := new(bytes.Buffer)
+	exportOpts := docker.ExportImageOptions{
+		Name:         imgName,
+		OutputStream: output,
+	}
+	if err := d.ExportImage(exportOpts); err != nil {
+		log.WithField("error", err).Fatal("failed to export docker image")
+	}
+
+	dockerImageData = output.Bytes()
+
+	// Remove
+	if err := d.RemoveImage(imgName); err != nil {
+		log.WithField("error", err).Fatal("failed to remove docker image")
 	}
 }
