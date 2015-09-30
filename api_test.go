@@ -78,9 +78,7 @@ func (s *APITestSuite) SetupSuite() {
 	}))
 	imageURL, _ := url.Parse(s.ImageServer.URL)
 	s.ImageService = imageURL.Host
-}
 
-func (s *APITestSuite) SetupTest() {
 	// Run the MDocker
 	s.MDocker, _ = mdocker.New("unix:///var/run/docker.sock", s.ImageService, "")
 	s.Server = s.MDocker.RunHTTP(uint(s.Port))
@@ -88,25 +86,15 @@ func (s *APITestSuite) SetupTest() {
 	time.Sleep(200 * time.Millisecond)
 }
 
-func (s *APITestSuite) TearDownTest() {
+func (s *APITestSuite) SetupTest() {}
+
+func (s *APITestSuite) TearDownTest() {}
+
+func (s *APITestSuite) TearDownSuite() {
 	// Stop the image store
 	stopChan := s.Server.StopChan()
 	s.Server.Stop(5 * time.Second)
 	<-stopChan
-
-	// Clean up docker
-	for _, containerID := range s.ContainerIDs {
-		opts := docker.RemoveContainerOptions{
-			ID:    containerID,
-			Force: true,
-		}
-		if err := s.Docker.RemoveContainer(opts); err != nil {
-			log.WithField("error", err).Error("failed to remove container")
-		}
-	}
-	if err := s.Docker.RemoveImage(s.ImageID); err != nil {
-		log.WithField("error", err).Error("failed to remove image")
-	}
 
 	// Clean up ovs
 	if output, err := exec.Command("ovs-vsctl", "del-br", s.Bridge).CombinedOutput(); err != nil {
@@ -115,6 +103,8 @@ func (s *APITestSuite) TearDownTest() {
 			"output": string(output),
 		}).Error("failed to remove ovs bridge")
 	}
+
+	// Any docker cleanup is handled on a per-suite basis
 }
 
 func (s *APITestSuite) loadImage() *rpc.Image {

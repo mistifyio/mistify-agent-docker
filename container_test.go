@@ -3,6 +3,7 @@ package mdocker_test
 import (
 	"testing"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/mistifyio/mistify-agent/client"
 	"github.com/mistifyio/mistify-agent/rpc"
@@ -14,9 +15,31 @@ type ContainerTestSuite struct {
 	APITestSuite
 }
 
-func (s *ContainerTestSuite) SetupTest() {
-	s.APITestSuite.SetupTest()
+func (s *ContainerTestSuite) SetupSuite() {
+	s.APITestSuite.SetupSuite()
 	_ = s.loadImage()
+}
+
+func (s *ContainerTestSuite) TearDownTest() {
+	// Clean up docker containers
+	for _, containerID := range s.ContainerIDs {
+		opts := docker.RemoveContainerOptions{
+			ID:    containerID,
+			Force: true,
+		}
+		if err := s.Docker.RemoveContainer(opts); err != nil {
+			log.WithField("error", err).Error("failed to remove container")
+		}
+	}
+}
+
+func (s *ContainerTestSuite) TearDownSuite() {
+	s.APITestSuite.TearDownSuite()
+
+	// Clean up docker image
+	if err := s.Docker.RemoveImage(s.ImageID); err != nil {
+		log.WithField("error", err).Error("failed to remove image")
+	}
 }
 
 func TestContainerTestSuite(t *testing.T) {

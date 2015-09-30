@@ -13,6 +13,15 @@ type ImageTestSuite struct {
 	APITestSuite
 }
 
+func (s ImageTestSuite) TearDownTest() {
+	s.APITestSuite.TearDownTest()
+
+	// Clean up docker image
+	if err := s.Docker.RemoveImage(s.ImageID); err != nil {
+		log.WithField("error", err).Error("failed to remove image")
+	}
+}
+
 func TestImageTestSuite(t *testing.T) {
 	suite.Run(t, new(ImageTestSuite))
 }
