@@ -45,7 +45,9 @@ func main() {
 	}
 
 	// Create and run the HTTP server
-	server := md.RunHTTP(port)
-	// Block until the server is stopped
-	<-server.StopChan()
+	server, err := md.RunHTTP(port)
+	if err != nil {
+		// Block until the server is stopped
+		<-server.StopChan()
+	}
 }

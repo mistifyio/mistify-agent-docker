@@ -81,7 +81,7 @@ func (s *APITestSuite) SetupSuite() {
 
 	// Run the MDocker
 	s.MDocker, _ = mdocker.New("unix:///var/run/docker.sock", s.ImageService, "")
-	s.Server = s.MDocker.RunHTTP(uint(s.Port))
+	s.Server, _ = s.MDocker.RunHTTP(uint(s.Port))
 	// Sleep to give the server time to start listening
 	time.Sleep(200 * time.Millisecond)
 }

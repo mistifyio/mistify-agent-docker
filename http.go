@@ -10,19 +10,19 @@ import (
 )
 
 // RunHTTP creates and runs the RPC HTTP server
-func (md *MDocker) RunHTTP(port uint) *graceful.Server {
+func (md *MDocker) RunHTTP(port uint) (*graceful.Server, error) {
 	s, err := rpc.NewServer(port)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to create rpc server")
-		return nil
+		return nil, err
 	}
 	if err := s.RegisterService(md); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to register mdocker service")
-		return nil
+		return nil, err
 	}
 
 	server := &graceful.Server{
@@ -30,7 +30,7 @@ func (md *MDocker) RunHTTP(port uint) *graceful.Server {
 		Server:  s.HTTPServer,
 	}
 	go listenAndServe(server)
-	return server
+	return server, nil
 }
 
 func listenAndServe(server *graceful.Server) {
