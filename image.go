@@ -16,6 +16,7 @@ import (
 	"github.com/mistifyio/mistify-agent/rpc"
 	logx "github.com/mistifyio/mistify-logrus-ext"
 	netutil "github.com/mistifyio/util/net"
+	"github.com/pborman/uuid"
 )
 
 // ListImages retrieves a list of Docker images
@@ -29,11 +30,13 @@ func (md *MDocker) ListImages(h *http.Request, request *rpc.ImageRequest, respon
 	images := make([]*rpc.Image, 0, len(apiImages))
 	for _, ai := range apiImages {
 		id, _ := docker.ParseRepositoryTag(ai.RepoTags[0])
-		images = append(images, &rpc.Image{
-			ID:   id,
-			Type: "container",
-			Size: uint64(ai.Size) / 1024 / 1024,
-		})
+		if uuid.Parse(id) != nil { // Mistify images are uuid repos
+			images = append(images, &rpc.Image{
+				ID:   id,
+				Type: "container",
+				Size: uint64(ai.Size) / 1024 / 1024,
+			})
+		}
 	}
 
 	response.Images = images
@@ -169,7 +172,6 @@ func fixRepositoriesFile(newName string, in io.Reader, out io.WriteCloser) {
 					log.WithField("error", err).Error("failed to parse repositories json")
 					return
 				}
-
 				// Should only be one key. Replace it with the new repo name
 				if len(repoMap) != 1 {
 					log.WithFields(log.Fields{

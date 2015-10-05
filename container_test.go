@@ -2,177 +2,245 @@ package mdocker_test
 
 import (
 	"testing"
-	"time"
 
-	h "github.com/bakins/test-helpers"
+	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
-	rpcClient "github.com/mistifyio/mistify-agent/client"
+	"github.com/mistifyio/mistify-agent/client"
 	"github.com/mistifyio/mistify-agent/rpc"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
 )
 
-func newGuest() *rpcClient.Guest {
-	return &rpcClient.Guest{
-		ID:    "foobar",
-		Type:  "container",
-		Image: client.ImageID,
-		Nics: []rpcClient.Nic{
-			rpcClient.Nic{
-				Name:    "test",
-				Network: "mistify0",
-				Mac:     "C0:B6:C5:EA:93:AC",
-				VLANs:   []int{},
-			},
+type ContainerTestSuite struct {
+	APITestSuite
+}
+
+func (s *ContainerTestSuite) SetupSuite() {
+	s.APITestSuite.SetupSuite()
+	_ = s.loadImage()
+}
+
+func (s *ContainerTestSuite) TearDownTest() {
+	// Clean up docker containers
+	for _, containerID := range s.ContainerIDs {
+		opts := docker.RemoveContainerOptions{
+			ID:    containerID,
+			Force: true,
+		}
+		if err := s.Docker.RemoveContainer(opts); err != nil {
+			log.WithField("error", err).Error("failed to remove container")
+		}
+	}
+}
+
+func (s *ContainerTestSuite) TearDownSuite() {
+	s.APITestSuite.TearDownSuite()
+
+	// Clean up docker image
+	if err := s.Docker.RemoveImage(s.ImageID); err != nil {
+		log.WithField("error", err).Error("failed to remove image")
+	}
+}
+
+func TestContainerTestSuite(t *testing.T) {
+	suite.Run(t, new(ContainerTestSuite))
+}
+
+func (s *ContainerTestSuite) TestCreateContainer() {
+	nics := []client.Nic{
+		client.Nic{
+			Name:    "test",
+			Network: s.Bridge,
+			Mac:     "13:7D:DA:F2:ED:63",
+			VLANs:   []int{1, 2, 3},
 		},
 	}
+
+	tests := []struct {
+		description string
+		guest       *client.Guest
+		expectedErr bool
+	}{
+		{"missing id",
+			&client.Guest{}, true},
+		{"missing nics",
+			&client.Guest{ID: uuid.New()}, true},
+		{"missing image",
+			&client.Guest{ID: uuid.New(), Nics: nics}, true},
+		{"valid request",
+			&client.Guest{ID: uuid.New(), Nics: nics, Image: s.ImageID, Memory: 10}, false},
+	}
+
+	for _, test := range tests {
+		msg := testMsgFunc(test.description)
+
+		response := &rpc.GuestResponse{}
+		request := &rpc.GuestRequest{Guest: test.guest}
+		err := s.Client.Do("MDocker.CreateContainer", request, response)
+		if test.expectedErr {
+			s.Error(err, msg("should fail"))
+		} else {
+			s.NoError(err, msg("should succeed"))
+		}
+		// Track any IDs for cleanup
+		if response.Guest != nil {
+			s.ContainerIDs = append(s.ContainerIDs, response.Guest.ID)
+		}
+	}
+
 }
 
-func createMainContainer(t *testing.T) {
-	if client.ContainerName != "" {
-		return
-	}
+func (s *ContainerTestSuite) TestListContainers() {
+	guest := s.createContainer()
 
-	req := &rpc.GuestRequest{
-		Guest:  newGuest(),
-		Action: "containerCreate",
-	}
-	resp := &rpc.GuestResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.CreateContainer", req, resp))
-	client.ContainerName = req.Guest.ID
-}
-
-func deleteMainContainer(t *testing.T) {
-	if client.ContainerName == "" {
-		return
-	}
-
-	req := &rpc.GuestRequest{
-		Guest:  newGuest(),
-		Action: "containerDelete",
-	}
-	resp := &rpc.GuestResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.DeleteContainer", req, resp))
-	client.ContainerName = ""
-}
-
-func TestCreateContainer(t *testing.T) {
-	importMainImage(t)
-	deleteMainContainer(t)
-	createMainContainer(t)
-
-	req := &rpc.GuestRequest{
-		Guest: &rpcClient.Guest{
-			ID:    "foobar",
-			Type:  "container",
-			Image: "asdfasdfpoih",
-		},
-		Action: "containerDelete",
-	}
-	resp := &rpc.GuestResponse{}
-
-	h.Assert(t, client.rpc.Do("MDocker.CreateContainer", req, resp) != nil, "bad image should error")
-}
-
-func TestListContainers(t *testing.T) {
-	importMainImage(t)
-	createMainContainer(t)
-
-	req := &rpc.ContainerRequest{
+	request := &rpc.ContainerRequest{
 		Opts: &docker.ListContainersOptions{
 			All: true,
 		},
 	}
-	resp := &rpc.ContainerResponse{}
+	response := &rpc.ContainerResponse{}
 
-	h.Ok(t, client.rpc.Do("MDocker.ListContainers", req, resp))
-}
-
-func TestGetContainer(t *testing.T) {
-	importMainImage(t)
-	createMainContainer(t)
-
-	req := &rpc.ContainerRequest{
-		ID: client.ContainerName,
+	s.NoError(s.Client.Do("MDocker.ListContainers", request, response))
+	found := false
+	for _, container := range response.Containers {
+		name := container.Name[1:]
+		if guest.ID == name {
+			found = true
+		}
+		s.NotEmpty(uuid.Parse(name))
 	}
-	resp := &rpc.ContainerResponse{}
-
-	h.Ok(t, client.rpc.Do("MDocker.GetContainer", req, resp))
+	s.True(found)
 }
 
-func TestSaveContainer(t *testing.T) {
-	importMainImage(t)
-	createMainContainer(t)
+func (s *ContainerTestSuite) TestGetContainer() {
+	guest := s.createContainer()
 
-	req := &rpc.ContainerRequest{
-		ID: client.ContainerName,
+	tests := []struct {
+		description string
+		ID          string
+		expectedErr bool
+	}{
+		{"missing id", "", true},
+		{"bad id", "asdf", true},
+		{"valid id", guest.ID, false},
+	}
+
+	for _, test := range tests {
+		msg := testMsgFunc(test.description)
+		request := &rpc.ContainerRequest{
+			ID: test.ID,
+		}
+		response := &rpc.ContainerResponse{}
+
+		err := s.Client.Do("MDocker.GetContainer", request, response)
+		if test.expectedErr {
+			s.Error(err, msg("should fail"))
+		} else {
+			s.NoError(s.Client.Do("MDocker.GetContainer", request, response), msg("should succeed"))
+			s.Len(response.Containers, 1, msg("should only return one container"))
+			s.Equal("/"+test.ID, response.Containers[0].Name, msg("should return the correct container"))
+		}
+	}
+}
+
+func (s *ContainerTestSuite) TestSaveContainer() {
+	guest := s.createContainer()
+
+	request := &rpc.ContainerRequest{
+		ID: guest.ID,
 		Opts: &docker.CommitContainerOptions{
-			Container:  client.ContainerName,
+			Container:  guest.ID,
 			Repository: "test-commit",
 		},
 	}
-	resp := &rpc.ImageResponse{}
-	h.Ok(t, client.rpc.Do("MDocker.SaveContainer", req, resp))
+	response := &rpc.ImageResponse{}
+	s.NoError(s.Client.Do("MDocker.SaveContainer", request, response))
 
-	ireq := &rpc.ImageRequest{
+	// Cleanup
+	delRequest := &rpc.ImageRequest{
 		ID: "test-commit",
 	}
-	iresp := &rpc.ImageResponse{}
-	h.Ok(t, client.rpc.Do("MDocker.DeleteImage", ireq, iresp))
+	delResponse := &rpc.ImageResponse{}
+	s.NoError(s.Client.Do("MDocker.DeleteImage", delRequest, delResponse))
 }
 
-func TestStartContainer(t *testing.T) {
-	importMainImage(t)
-	createMainContainer(t)
-
-	badreq := &rpc.GuestRequest{
-		Guest: &rpcClient.Guest{
-			ID:    "foobar2",
-			Type:  "container",
-			Image: "asdfasdfpoih",
-		},
-		Action: "containerDelete",
-	}
-	badresp := &rpc.GuestResponse{}
-
-	h.Assert(t, client.rpc.Do("MDocker.StartContainer", badreq, badresp) != nil, "bad container should error")
-
-	req := &rpc.GuestRequest{
-		Guest:  newGuest(),
-		Action: "containerStart",
-	}
-	resp := &rpc.GuestResponse{}
-	h.Ok(t, client.rpc.Do("MDocker.StartContainer", req, resp))
-	h.Equals(t, resp.Guest.State, "running")
-	// Sleep a second here to avoid a race in subsequent container stopping
-	time.Sleep(time.Second)
+func (s *ContainerTestSuite) TestStartContainer() {
+	guest := s.createContainer()
+	s.testContainerAction("StartContainer", guest, "running")
 }
 
-func TestStopContainer(t *testing.T) {
-	importMainImage(t)
-	createMainContainer(t)
-
-	badreq := &rpc.GuestRequest{
-		Guest: &rpcClient.Guest{
-			ID:    "foobar2",
-			Type:  "container",
-			Image: "asdfasdfpoih",
-		},
-		Action: "containerStop",
-	}
-	badresp := &rpc.GuestResponse{}
-	h.Assert(t, client.rpc.Do("MDocker.StopContainer", badreq, badresp) != nil, "bad container should error")
-	req := &rpc.GuestRequest{
-		Guest:  newGuest(),
-		Action: "containerStop",
-	}
-	resp := &rpc.GuestResponse{}
-	h.Ok(t, client.rpc.Do("MDocker.StopContainer", req, resp))
-	h.Equals(t, resp.Guest.State, "stopped")
+func (s *ContainerTestSuite) TestStopContainer() {
+	guest := s.createContainer()
+	_, _ = s.containerAction("StartContainer", guest)
+	s.testContainerAction("StopContainer", guest, "stopped")
 }
 
-func TestDeleteContainer(t *testing.T) {
-	importMainImage(t)
-	createMainContainer(t)
-	deleteMainContainer(t)
+func (s *ContainerTestSuite) TestRestartContainer() {
+	guest := s.createContainer()
+	_, _ = s.containerAction("StartContainer", guest)
+	s.testContainerAction("RestartContainer", guest, "running")
+}
+
+func (s *ContainerTestSuite) TestRebootContainer() {
+	guest := s.createContainer()
+	_, _ = s.containerAction("StartContainer", guest)
+	s.testContainerAction("RebootContainer", guest, "running")
+}
+
+func (s *ContainerTestSuite) TestPauseContainer() {
+	guest := s.createContainer()
+	_, _ = s.containerAction("StartContainer", guest)
+	s.testContainerAction("PauseContainer", guest, "paused")
+	_, _ = s.containerAction("UnpauseContainer", guest)
+}
+
+func (s *ContainerTestSuite) TestUnpauseContainer() {
+	guest := s.createContainer()
+	_, _ = s.containerAction("StartContainer", guest)
+	_, _ = s.containerAction("PauseContainer", guest)
+	s.testContainerAction("UnpauseContainer", guest, "running")
+}
+
+func (s *ContainerTestSuite) testContainerAction(action string, guest *client.Guest, finalState string) {
+	tests := []struct {
+		description string
+		guest       *client.Guest
+		expectedErr bool
+	}{
+		{"missing id",
+			&client.Guest{}, true},
+		{"invalid id",
+			&client.Guest{ID: "asdf"}, true},
+		{"valid id",
+			guest, false},
+	}
+
+	for _, test := range tests {
+		msg := testMsgFunc(test.description)
+		response, err := s.containerAction(action, test.guest)
+		if test.expectedErr {
+			s.Error(err, msg("should fail"))
+		} else {
+			s.NoError(err, msg("should succeed"))
+			s.Equal(finalState, response.Guest.State, msg("container should be in expected state"))
+		}
+	}
+}
+
+func (s *ContainerTestSuite) containerAction(action string, guest *client.Guest) (*rpc.GuestResponse, error) {
+	response := &rpc.GuestResponse{}
+	request := &rpc.GuestRequest{
+		Guest: guest,
+	}
+	return response, s.Client.Do("MDocker."+action, request, response)
+}
+
+func (s *ContainerTestSuite) TestDeleteContainer() {
+	guest := s.createContainer()
+
+	request := &rpc.GuestRequest{
+		Guest: guest,
+	}
+	response := &rpc.GuestResponse{}
+	s.NoError(s.Client.Do("MDocker.DeleteContainer", request, response))
 }
