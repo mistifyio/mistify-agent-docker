@@ -48,7 +48,7 @@ func TestContainerTestSuite(t *testing.T) {
 
 func (s *ContainerTestSuite) TestCreateContainer() {
 	nics := []client.Nic{
-		client.Nic{
+		{
 			Name:    "test",
 			Network: s.Bridge,
 			Mac:     "13:7D:DA:F2:ED:63",

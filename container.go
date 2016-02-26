@@ -120,7 +120,7 @@ func (md *MDocker) SaveContainer(h *http.Request, request *rpc.ContainerRequest,
 		return err
 	}
 	response.Images = []*rpc.Image{
-		&rpc.Image{
+		{
 			ID:   image.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
@@ -159,7 +159,7 @@ func (md *MDocker) CreateContainer(h *http.Request, request *rpc.GuestRequest, r
 			NetworkMode: "none",
 			// Expose /dev/zfs inside all containers (okay because they are unprivileged)
 			Devices: []docker.Device{
-				docker.Device{
+				{
 					PathOnHost:        "/dev/zfs",
 					PathInContainer:   "/dev/zfs",
 					CgroupPermissions: "rwm",
