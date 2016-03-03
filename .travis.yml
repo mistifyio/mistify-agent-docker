@@ -1,0 +1,73 @@
+language: go
+dist: trusty
+sudo: required
+
+# Versions of Go and deps in the build matrix should test the current in use by
+# mistify-os and the latest release.
+env:
+  # Current
+  - V_DOCKER=1.7.0 V_OVS=63b0899453da247bfa23517e62c40b73762fd65e
+  # Latest Docker Release
+  - V_DOCKER=1.10.2 V_OVS=63b0899453da247bfa23517e62c40b73762fd65e
+  # Latest OVS Release
+  - V_DOCKER=1.7.0 V_OVS=v2.5.0
+  # Latest
+  - V_DOCKER=1.10.2 V_OVS=v2.5.0
+
+matrix:
+  allow_failures:
+    # Latest Docker Release
+    - env: V_DOCKER=1.10.2 V_OVS=63b0899453da247bfa23517e62c40b73762fd65e
+    # Latest OVS Release
+    - env: V_DOCKER=1.7.0 V_OVS=v2.5.0
+    # Latest
+    - env: V_DOCKER=1.10.2 V_OVS=v2.5.0
+
+go:
+  - 1.5.2
+  - 1.6
+
+before_install:
+  - go get github.com/alecthomas/gometalinter
+  - gometalinter --install --update
+
+install:
+  - sudo apt-get install -y --force-yes software-properties-common
+  - sudo add-apt-repository -y ppa:zfs-native/stable
+  - sudo apt-get update
+
+  - sudo apt-get purge -y --force-yes docker-engine
+  - ovsDeps="build-essential debhelper autoconf dh-autoreconf libssl-dev fakeroot python"
+  - zolDeps="uuid-dev linux-headers-$(uname -r) spl-dkms"
+  - dockerDeps="docker-engine=$V_DOCKER-0~trusty"
+  - sudo -E DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes $ovsDeps $zolDeps $dockerDeps
+  # ubuntu-zfs needs to be after zfs-dkms, which needs to be after spl-dkms
+  - sudo apt-get install -y --force-yes zfs-dkms
+  - sudo apt-get install -y --force-yes ubuntu-zfs
+  - sudo modprobe zfs
+
+  # OVS
+  - git clone https://github.com/openvswitch/ovs.git /tmp/ovs
+  - pushd /tmp/ovs
+  - git checkout $V_OVS
+  - DEB_BUILD_OPTIONS="parallel=$(grep -c '^processor' /proc/cpuinfo) nocheck" fakeroot debian/rules binary
+  - sudo dpkg -i ../openvswitch-{common,pki,switch}*.deb
+  - popd
+
+  - go get -t -v ./...
+
+before_script:
+  - sudo ovs-vsctl add-br mistify0
+  - export PATH=$PATH:/tmp/ovs/utilities
+
+script:
+  - gometalinter --disable-all --enable={errcheck,gofmt,goimports,golint,vet,vetshadow} --deadline=30s ./...
+  - sudo -E $(which go) test -v ./...
+
+after_success:
+  - gometalinter --disable={errcheck,gofmt,golint,vet,vetshadow} --deadline=30s ./...
+
+notifications:
+  email: false
+  slack:
+    secure: "cltAerGlxtvi7q7oZ0al+zdihvtfpA5nHsLpzC7nDk9DqG37Ll1ygpTB9WTHefRQi3DbMMgXJXKHzF+eLuUglxXlx5C/UpS3nAA+lXWC84X2PBnSsX7OO0XVFjoX+8Z2TINfDLsIb9DPqZW/ag0Yc4j555uC2GKzimZ41TKs6PRi6QXTgxBg2KLX3PTWqeuJ6Zw9/rFgrFEX7WZPV4IeQZ2W5lTh/tF2cGYhPpyPfE35kyU3aFQjQUO+pNeMiqDukZwr1GxevxK8SeollhLTlDXcWW7Ba/xIpyrlA8hbqmnxsq4PNhoDUcTCBwygpYLfmRFf8JlJ8aVQc4fUXrLLjKi3UmOKT/KqGKR5DaQFZvuq5cDtLsX2mCDZQEukDCkD2k1omqJeovD/nsekA1Ct54KiiQBhf976zzWRoAnEZwcjnIebxm5GBPOy9+PUvnA9WlfOYS/sge3Gk4JOIwg+OoQ5Yw8Brkdo3dXw/PTlEaeRjm/FI5kXJ1d0Y/MFy7xO3cy3Y8n51lIcaDWsVEwH5xEeGqlA2oDU7PED1gqDkxA/dO5jbLhkhJe4+Y1hkt4Y/JnOfCtxyEwNz6lz5ApCR65wk7CQKytkmdCjMu1XAdZvCHQFSKjT3J8XYMi8e1HQq3m0JfA8s/0Yi/nJIm+pd7nOEmuwPpPvCGs3LbPCmq8="

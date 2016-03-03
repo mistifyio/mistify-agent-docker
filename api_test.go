@@ -124,7 +124,7 @@ func (s *APITestSuite) createContainer() *client.Guest {
 			Image:  s.ImageID,
 			Memory: 10,
 			Nics: []client.Nic{
-				client.Nic{
+				{
 					Name:    "test",
 					Network: s.Bridge,
 					Mac:     "13:7D:DA:F2:ED:63",

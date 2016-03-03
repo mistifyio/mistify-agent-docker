@@ -51,7 +51,7 @@ func (md *MDocker) GetImage(h *http.Request, request *rpc.ImageRequest, response
 	}
 
 	response.Images = []*rpc.Image{
-		&rpc.Image{
+		{
 			ID:   request.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
@@ -133,7 +133,7 @@ func (md *MDocker) LoadImage(h *http.Request, request *rpc.ImageRequest, respons
 	}
 
 	response.Images = []*rpc.Image{
-		&rpc.Image{
+		{
 			ID:   request.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
@@ -251,7 +251,7 @@ func (md *MDocker) DeleteImage(h *http.Request, request *rpc.ImageRequest, respo
 	}
 
 	response.Images = []*rpc.Image{
-		&rpc.Image{
+		{
 			ID:   request.ID,
 			Type: "container",
 			Size: uint64(image.Size) / 1024 / 1024,
