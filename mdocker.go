@@ -90,7 +90,7 @@ func (md *MDocker) RequestOpts(req RPCRequest, opts interface{}) error {
 }
 
 // GetInfo provides general information about the system from Docker
-func (md *MDocker) GetInfo(h *http.Request, request *struct{}, response *docker.Env) error {
+func (md *MDocker) GetInfo(h *http.Request, request *struct{}, response *docker.DockerInfo) error {
 	info, err := md.client.Info()
 	if err != nil {
 		return err
