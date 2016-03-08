@@ -71,7 +71,7 @@ func (s *MDockerTestSuite) TestRequestOpts() {
 
 func (s *MDockerTestSuite) TestGetInfo() {
 	request := &struct{}{}
-	response := &docker.Env{}
+	response := &docker.DockerInfo{}
 	s.NoError(s.Client.Do("MDocker.GetInfo", request, response))
-	s.True(len(*response) > 0)
+	s.NotEmpty(response.ID)
 }

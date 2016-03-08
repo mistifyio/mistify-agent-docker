@@ -134,7 +134,7 @@ GetImage retrieves information about a specific Docker image
 #### func (*MDocker) GetInfo
 
 ```go
-func (md *MDocker) GetInfo(h *http.Request, request *struct{}, response *docker.Env) error
+func (md *MDocker) GetInfo(h *http.Request, request *struct{}, response *docker.DockerInfo) error
 ```
 GetInfo provides general information about the system from Docker
 
@@ -192,7 +192,7 @@ RestartContainer restarts a Docker container
 #### func (*MDocker) RunHTTP
 
 ```go
-func (md *MDocker) RunHTTP(port uint) error
+func (md *MDocker) RunHTTP(port uint) (*graceful.Server, error)
 ```
 RunHTTP creates and runs the RPC HTTP server
 
